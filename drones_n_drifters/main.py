@@ -6,35 +6,42 @@ import csv
 import cv2
 import skvideo.io
 import numpy as np
+from imgprocess.image_processing import *
 
-#Video capture
-#cap = cv2.VideoCapture("/home/grumpynounours/Desktop/Electric_Brain/measurements/pumkin_passing_cut.avi")
+# Debug flag
+debug=True
+
+# Video capture
+# cap = cv2.VideoCapture("/home/grumpynounours/Desktop/Electric_Brain/measurements/pumkin_passing_cut.avi")
 # quick fix
 cap = skvideo.io.VideoCapture("/home/grumpynounours/Desktop/Electric_Brain/measurements/pumkin_passing_test.MOV")
 
-#Color detection attributes
-# RBG range value for Orange pumkin
-colorBounds = ([180, 69, 0], [255, 215, 255]) # RGB
+# Color detection attributes
+colorDetect = False  # perform color detection yes/no, true/false
+#  RBG range value for Orange pumkin
+colorBounds = ([180, 60, 0], [240, 220, 250])  # shades of orange
 whiteBounds = ([245, 245, 245], [255, 255, 255])
-# Dilation kernel
-dilationKernel = np.ones((501, 501))
-# create NumPy arrays from the color boundaries
-lower = np.array(colorBounds[0], dtype="uint8")
-upper = np.array(colorBounds[1], dtype="uint8")
-lowerW = np.array(whiteBounds[0], dtype="uint8")
-upperW = np.array(whiteBounds[1], dtype="uint8")
 
-#Motion tracking attributes
+# White patches masking attributes
+#  Dilation kernel
+dilatationKernelSize = 301
+
+# Motion tracking attributes
 lk_params = dict(winSize=(15, 15),  # what are those?
                  maxLevel=2,
                  criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
+#  ref. http://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_video/py_lucas_kanade/py_lucas_kanade.html
+#  ref. http://docs.opencv.org/2.4/modules/video/doc/motion_analysis_and_object_tracking.html
 
 feature_params = dict(maxCorners=500,  # what are those?
                       qualityLevel=0.3,
                       minDistance=7,
                       blockSize=7)
-#track_len = 10
-detect_interval = 5
+#  ref. http://docs.opencv.org/3.0-beta/doc/py_tutorials/py_feature2d/py_shi_tomasi/py_shi_tomasi.html
+#  ref. http://docs.opencv.org/2.4/modules/imgproc/doc/feature_detection.html?highlight=goodfeaturestotrack
+
+detect_interval = 5  # Default value = 5. optical flow finds the next point which may look close to it.
+                     # So for a robust tracking, corner points are detected at every detect_interval frames.
 tracks = []
 frame_idx = 0
 
@@ -114,20 +121,22 @@ cv2.resizeWindow('test', 1200,1200)
 
 # While loop with both filtering and motion tracking
 # While loop color detection and surf masking
-while(cap.isOpened()):
+#while(cap.isOpened()):
+for l in range(cap.info['streams'][0]['nb_frames']):
     ret, frame = cap.read()
     if ret:
-        #Color detection, here pumkin orange
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        maskPumkins = cv2.inRange(rgb, lower, upper)
+        #Color detection, here pumkin orange
+        if colorDetect:
+            greyScaleMask = color_detection(rgb, colorBounds=colorBounds, debug=debug)
+        else:
+            greyScaleMask = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         #Mask-out white
-        # Finding white patches
-        grays = cv2.cvtColor(rgb,cv2.COLOR_RGB2GRAY)
-        maskWhite = cv2.inRange(rgb, lowerW, upperW)
-        #  Dilate white patches
-        dilatedMaskWhite = cv2.bitwise_not(cv2.dilate(maskWhite, dilationKernel))
+        dilatedMaskWhite = white_patches_masking(rgb, whiteBounds=whiteBounds,
+                                                      dilatationKernelSize=dilatationKernelSize,
+                                                      debug=debug)
         #Resulting mask
-        maskWP = cv2.bitwise_and(maskPumkins, maskPumkins, mask=dilatedMaskWhite)
+        maskWP = cv2.bitwise_and(greyScaleMask, greyScaleMask, mask=dilatedMaskWhite)
         #Motion tracking
         frame_gray = maskWP  # cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         vis = rgb.copy()
@@ -170,16 +179,17 @@ while(cap.isOpened()):
         prev_gray = frame_gray
         cv2.imshow('test', vis)
         if cv2.waitKey(1) & 0xFF == ord('q'):
+            print "Breaking loop"
             break
+# Release everything if job is finished
+cap.release()
+cv2.destroyAllWindows()
 # Save tracks in csv
+print "Saving"
 myfile = open('/home/grumpynounours/Desktop/Electric_Brain/measurements/captured_tracks.csv', 'wb')
 wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
 wr.writerow(tracks)
 
-
-# Release everything if job is finished
-cap.release()
-cv2.destroyAllWindows()
 
 
 # #Write video...does not work!
