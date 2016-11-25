@@ -6,7 +6,7 @@ import csv
 import cv2
 import skvideo.io
 import numpy as np
-from imgprocess.image_processing import *
+from imgprocess.image_filtering import *
 
 # Debug flag
 debug=True
@@ -23,8 +23,15 @@ colorBounds = ([180, 60, 0], [240, 220, 250])  # shades of orange
 whiteBounds = ([245, 245, 245], [255, 255, 255])
 
 # White patches masking attributes
+maskOutWhitePatches = True
 #  Dilation kernel
 dilatationKernelSize = 301
+
+# Circle detection...not working yet
+circleDetection = False
+#  circle sizes' range
+minArea = 2
+maxArea = 40
 
 # Motion tracking attributes
 lk_params = dict(winSize=(15, 15),  # what are those?
@@ -46,78 +53,8 @@ tracks = []
 frame_idx = 0
 
 # Plotting attributes
-cv2.namedWindow('test',cv2.WINDOW_NORMAL)
-cv2.resizeWindow('test', 1200,1200)
-
-# # While loop color detection and surf masking
-# while(cap.isOpened()):
-#     ret, frame = cap.read()
-#     if ret:
-#         #Color detection, here pumkin orange
-#         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-#         maskPumkins = cv2.inRange(rgb, lower, upper)
-#         #Mask-out white
-#         # Finding white patches
-#         grays = cv2.cvtColor(rgb,cv2.COLOR_RGB2GRAY)
-#         maskWhite = cv2.inRange(rgb, lowerW, upperW)
-#         #  Dilate white patches
-#         dilatedMaskWhite = cv2.bitwise_not(cv2.dilate(maskWhite, dilationKernel))
-#         #Resulting mask
-#         mask = cv2.bitwise_and(maskPumkins, maskPumkins, mask = dilatedMaskWhite)
-#         # Plotting
-#         cv2.imshow("test", mask)
-#         cv2.waitKey(1)
-# # Release everything if job is finished
-# cap.release()
-# cv2.destroyAllWindows()
-
-# # While loop motion tracking
-# while(cap.isOpened()):
-#     ret, frame = cap.read()
-#     if ret:
-#         frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-#         vis = cv2.cvtColor(frame.copy(), cv2.COLOR_BGR2RGB)
-#         if len(tracks) > 0:
-#             img0, img1 = prev_gray, frame_gray
-#             p0 = np.float32([tr[-1] for tr in tracks]).reshape(-1, 1, 2)
-#             p1, st, err = cv2.calcOpticalFlowPyrLK(img0, img1, p0, None, **lk_params)
-#             p0r, st, err = cv2.calcOpticalFlowPyrLK(img1, img0, p1, None, **lk_params)
-#             d = abs(p0-p0r).reshape(-1, 2).max(-1)
-#             good = d < 1
-#             new_tracks = []
-#             for tr, (x, y), good_flag in zip(tracks, p1.reshape(-1, 2), good):
-#                 if not good_flag:
-#                     continue
-#                 tr.append((x, y))
-#                 #if len(tr) > track_len:
-#                 #    del tr[0]
-#                 new_tracks.append(tr)
-#                 cv2.circle(vis, (x, y), 2, (0, 255, 0), -1)
-#             tracks = new_tracks
-#             cv2.polylines(vis, [np.int32(tr) for tr in tracks], False, (0, 255, 0))
-#             #draw_str(vis, (20, 20), 'track count: %d' % len(tracks))
-#             x = 20
-#             y = 20
-#             s = 'track count: %d' % len(tracks)
-#             cv2.putText(vis, s, (x + 1, y + 1), cv2.FONT_HERSHEY_PLAIN, 1.0, (0, 0, 0), thickness=2, lineType=cv2.LINE_AA)
-#             cv2.putText(vis, s, (x, y), cv2.FONT_HERSHEY_PLAIN, 1.0, (255, 255, 255), lineType=cv2.LINE_AA)
-#
-#         if frame_idx % detect_interval == 0:
-#             mask = np.zeros_like(frame_gray)
-#             mask[:] = 255
-#             for x, y in [np.int32(tr[-1]) for tr in tracks]:
-#                 cv2.circle(mask, (x, y), 5, 0, -1)
-#             p = cv2.goodFeaturesToTrack(frame_gray, mask = mask, **feature_params)
-#             if p is not None:
-#                 for x, y in np.float32(p).reshape(-1, 2):
-#                     tracks.append([(x, y)])
-#
-#         frame_idx += 1
-#         prev_gray = frame_gray
-#         cv2.imshow('test', vis)
-#
-#         cv2.waitKey(1)
-
+cv2.namedWindow('test', cv2.WINDOW_NORMAL)
+cv2.resizeWindow('test', 1200, 1200)
 
 # While loop with both filtering and motion tracking
 # While loop color detection and surf masking
@@ -126,22 +63,24 @@ for l in range(cap.info['streams'][0]['nb_frames']):
     ret, frame = cap.read()
     if ret:
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        #Color detection, here pumkin orange
+        # Color detection, here pumkin orange
         if colorDetect:
             greyScaleMask = color_detection(rgb, colorBounds=colorBounds, debug=debug)
         else:
             greyScaleMask = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        #Mask-out white
-        dilatedMaskWhite = white_patches_masking(rgb, whiteBounds=whiteBounds,
-                                                      dilatationKernelSize=dilatationKernelSize,
-                                                      debug=debug)
-        #Resulting mask
-        maskWP = cv2.bitwise_and(greyScaleMask, greyScaleMask, mask=dilatedMaskWhite)
+        # Mask-out white
+        if maskOutWhitePatches:
+            dilatedMaskWhite = white_patches_masking(rgb, whiteBounds=whiteBounds,
+                                                     dilatationKernelSize=dilatationKernelSize,
+                                                     debug=debug)
+            # Resulting mask
+            greyScaleMask = cv2.bitwise_and(greyScaleMask, greyScaleMask, mask=dilatedMaskWhite)
+        # Shape detection
+        if circleDetection:
+            greyScaleMask = circle_detection(rgb, minArea, maxArea, debug=debug)
         #Motion tracking
-        frame_gray = maskWP  # cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        vis = rgb.copy()
         if len(tracks) > 0:
-            img0, img1 = prev_gray, frame_gray
+            img0, img1 = prev_gray, greyScaleMask
             p0 = np.float32([tr[-1] for tr in tracks]).reshape(-1, 1, 2)
             p1, st, err = cv2.calcOpticalFlowPyrLK(img0, img1, p0, None, **lk_params)
             p0r, st, err = cv2.calcOpticalFlowPyrLK(img1, img0, p1, None, **lk_params)
@@ -155,29 +94,29 @@ for l in range(cap.info['streams'][0]['nb_frames']):
                 #if len(tr) > track_len:
                 #    del tr[0]
                 new_tracks.append(tr)
-                cv2.circle(vis, (x, y), 2, (0, 255, 0), -1)
+                cv2.circle(rgb, (x, y), 2, (0, 255, 0), -1)
             tracks = new_tracks
-            cv2.polylines(vis, [np.int32(tr) for tr in tracks], False, (0, 255, 0))
-            #draw_str(vis, (20, 20), 'track count: %d' % len(tracks))
+            cv2.polylines(rgb, [np.int32(tr) for tr in tracks], False, (0, 255, 0))
+            #draw_str(rgb, (20, 20), 'track count: %d' % len(tracks))
             x = 20
             y = 20
             s = 'track count: %d' % len(tracks)
-            cv2.putText(vis, s, (x + 1, y + 1), cv2.FONT_HERSHEY_PLAIN, 1.0, (0, 0, 0), thickness=2, lineType=cv2.LINE_AA)
-            cv2.putText(vis, s, (x, y), cv2.FONT_HERSHEY_PLAIN, 1.0, (255, 255, 255), lineType=cv2.LINE_AA)
+            cv2.putText(rgb, s, (x + 1, y + 1), cv2.FONT_HERSHEY_PLAIN, 1.0, (0, 0, 0), thickness=2, lineType=cv2.LINE_AA)
+            cv2.putText(rgb, s, (x, y), cv2.FONT_HERSHEY_PLAIN, 1.0, (255, 255, 255), lineType=cv2.LINE_AA)
 
         if frame_idx % detect_interval == 0:
-            mask = np.zeros_like(frame_gray)
+            mask = np.zeros_like(greyScaleMask)
             mask[:] = 255
             for x, y in [np.int32(tr[-1]) for tr in tracks]:
                 cv2.circle(mask, (x, y), 5, 0, -1)
-            p = cv2.goodFeaturesToTrack(frame_gray, mask=mask, **feature_params)
+            p = cv2.goodFeaturesToTrack(greyScaleMask, mask=mask, **feature_params)
             if p is not None:
                 for x, y in np.float32(p).reshape(-1, 2):
                     tracks.append([(x, y)])
 
         frame_idx += 1
-        prev_gray = frame_gray
-        cv2.imshow('test', vis)
+        prev_gray = greyScaleMask
+        cv2.imshow('test', rgb)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             print "Breaking loop"
             break
