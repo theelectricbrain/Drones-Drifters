@@ -62,9 +62,10 @@ def white_patches_masking(rgb, whiteBounds = ([235, 235, 235], [255, 255, 255]),
 
     return dilatedMaskWhite
 
+# TODO: not working
 def disk_filtering(rgb, minPixel, maxPixel, debug=False):
     """
-    Detect disk/circle and mask rest...not working right now !
+    Detects disk/circle and masks the rest
 
     :param rgb: RGB frame
     :param minPixel: minimum pixel size of the disks
@@ -81,8 +82,7 @@ def disk_filtering(rgb, minPixel, maxPixel, debug=False):
     for kp in keypoints:
         i = int(np.round(kp.pt[1]))
         j = int(np.round(kp.pt[0]))
-        interval = 3  # white square of 6*6 pixels
-        diskMask[(i - interval):(i + interval), (j - interval):(j + interval)] = 255
+        diskMask = cv2.circle(diskMask, (i, j), 10, 255, -1)
     if debug:
         cv2.namedWindow('disk filtering', cv2.WINDOW_NORMAL)
         cv2.resizeWindow('disk filtering', 1200, 1200)
@@ -90,7 +90,7 @@ def disk_filtering(rgb, minPixel, maxPixel, debug=False):
 
     return diskMask
 
-def circle_detection(rgb, minArea=2, maxArea=40, minVertices=6, maxVertices=10, debug=False):
+def circle_detection(rgb, minArea=10, maxArea=30, minVertices=6, maxVertices=10, debug=False):
     """
     Detects circle of given pixel size range
     :param rgb: RGB frame

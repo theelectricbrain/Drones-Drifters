@@ -2,23 +2,30 @@
 # encoding: utf-8
 
 from __future__ import division
-import csv
+import sys
 import cv2
-import skvideo.io
 import numpy as np
+import matplotlib.pyplot as plt
 from imgprocess.image_filtering import *
 from traj.motion_tracking import *
+from misc.utilities import *
+# Quick fix
+from skvideo.io import VideoCapture
 
+### Syncronisation and video splitting block ###
+# TODO: to be developed
+
+### Video processing block ###
 # Debug flag
 debug=True
 
-# Save video
-saveVideo = False
+# Save Frames
+saveFrames = False
 
 # Video capture
 # cap = cv2.VideoCapture("/home/grumpynounours/Desktop/Electric_Brain/measurements/pumkin_passing_cut.avi")
 # quick fix
-cap = skvideo.io.VideoCapture("/home/grumpynounours/Desktop/Electric_Brain/measurements/pumkin_passing_test.MOV")
+cap = VideoCapture("/home/grumpynounours/Desktop/Electric_Brain/measurements/pumkin_passing_test.MOV")
 
 # Color detection attributes
 colorDetect = False  # perform color detection yes/no, true/false
@@ -30,7 +37,7 @@ maskOutWhitePatches = True
 #  RBG range value for white surface waves
 whiteBounds = ([245, 245, 245], [255, 255, 255])
 #  Dilation kernel
-dilatationKernelSize = 301
+dilatationKernelSize = 401
 
 # Circle detection...not working yet
 circleDetection = False
@@ -53,12 +60,6 @@ feature_params = dict(maxCorners=500,  # what are those?
 #  Minimum track length as storage criteria
 minTrackLength = 200
 detect_interval = 5  # Default value = 5.
-
-# Plotting attributes
-cv2.namedWindow('test', cv2.WINDOW_NORMAL)
-cv2.resizeWindow('test', 1200, 1200)
-# Create some random colors
-color = np.random.randint(0,255,(100,3))
 
 # Initialise loop through video frames
 tracks = []
@@ -90,10 +91,15 @@ for l in range(cap.info['streams'][0]['nb_frames']):
         # Motion tracking
         if len(tracks) == 0:
             prev_gray = greyScaleMask
-        tracks = motion_tracking_Lucas_Kanade(tracks, frame_idx, prev_gray, greyScaleMask,
-                                              minTrackLength=minTrackLength, detect_interval=detect_interval,
-                                              lk_params=lk_params, feature_params=feature_params, debug=debug)
-        #  incrementation
+        if not circleDetection:
+            tracks = motion_tracking_Lucas_Kanade(tracks, frame_idx, prev_gray, greyScaleMask,
+                                                  minTrackLength=minTrackLength, detect_interval=detect_interval,
+                                                  lk_params=lk_params, feature_params=feature_params, debug=debug)
+        else:
+            #TODO implement alternative motion tracker
+            print("Option not supported yet. Alternative motion tracker needed:", sys.exc_info()[0])
+            raise
+        # Incrementation
         frame_idx += 1
         prev_gray = greyScaleMask
 
@@ -102,13 +108,23 @@ for l in range(cap.info['streams'][0]['nb_frames']):
             print "Breaking loop"
             break
         # Save Video
-        if saveVideo:
-            #out.write(rgb)
+        if saveFrames:
             cv2.imwrite("image"+str(l).zfill(4)+".png", rgb)
 # Release everything if job is finished
 cap.release()
 cv2.destroyAllWindows()
 
-# TODO: SHow final frame with tracks
-# TODO: Show tracks' length histogram and filter from there, while loop and re-show
+# Turn tracks list into array
+tracks = np.asarray(tracks)
+
+# Filtering and selecting trajectories
+#  Selection through trajectories' sizes histogram
+tracks = tracks_sizes_selection(tracks, rgb)
+# TODO: Code interface/user-input based tracks selection
+
+### Geo-referencing block ###
+# TODO: to be developed
 # TODO: Import Tracks in panda frame and start working on them (georef, resampling,...)
+
+### Exportation block ###
+# TODO: to be developed
