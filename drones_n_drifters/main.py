@@ -5,7 +5,7 @@ from __future__ import division
 import sys
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
+from pyproj import Proj, pj_list
 from imgprocess.image_filtering import *
 from traj.motion_tracking import *
 from misc.utilities import *
@@ -123,8 +123,56 @@ tracks = tracks_sizes_selection(tracks, rgb)
 # TODO: Code interface/user-input based tracks selection
 
 ### Geo-referencing block ###
+# Need this before of tuples
+tempTracks = []
+for tr in tracks:
+    tempTracks.append([])
 # TODO: to be developed
 # TODO: Import Tracks in panda frame and start working on them (georef, resampling,...)
+# Attributes to retrieve from log. TODO: define class UAV
+centreCoordinates = (-66.33558489, 44.28223669) # (lon., lat.) in decimal degrees. Convention
+yaw = np.deg2rad(10.0)  # in radian. Convention?
+vertiFOV = np.deg2rad(61.9)  # in rad.
+horiFOV = np.deg2rad(82.4)  # in rad.
+altitude = 300.0 / 3.28 # in meters (feet to meter conversion here). Convention?
+nx = float(frame.shape[0])
+ny = float(frame.shape[1])
+horiMpP = (2.0*np.tan(horiFOV/2.0))/nx  # horizontal meters per pixel ratio
+vertiMpP = (2.0*np.tan(vertiFOV/2.0))/ny  # vertical meters per pixel ratio, function of the altitude. Lens correction could be needed here
+#  Relative distance correction with Passive (aka Alias) transformation
+for tr, TR in zip(tracks, tempTracks):
+    for pt in tr:
+        pt = list(pt)
+        x = pt[0] - (nx/2.0)
+        y = pt[1] - (ny/2.0)
+        xr = x*np.cos(yaw) + y*np.sin(yaw)
+        yr = y*np.cos(yaw) - x*np.sin(yaw)
+        TR.append([xr, yr])
+#  Conversion deg. to m.
+proj = raw_input("Is the projection UTM (yes/no)?: ").upper()
+if proj in "YES":
+    proj = 'utm'
+else:
+    print "Choose a coordinate projection from the following list:"
+    for key in pj_list:
+        print key + ": " + pj_list[key]
+    proj = raw_input("Type in the coordinate projection: ")
+myproj = Proj(proj=proj)
+xc, yc = myproj(centreCoordinates[0], centreCoordinates[1])
+#  Absolute distance and conversion m. to deg.
+for tr in tempTracks:
+    for pt in tr:
+        lon, lat = myproj(xc + pt[0], yc + pt[1], inverse=True)
+        pt[0] = lon
+        pt[1] = lat
+# Need this before of tuples
+tracks = []
+for tr in tempTracks:
+    tracks.append([])
+for tr, TR in zip(tempTracks, tracks):
+    for pt in tr:
+        TR.append(tuple(pt))
+del tempTracks
 
 ### Exportation block ###
 # TODO: to be developed

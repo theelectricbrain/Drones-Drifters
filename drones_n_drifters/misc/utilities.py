@@ -37,6 +37,7 @@ def tracks_sizes_selection(tracks, rgb):
         ax.set_xlabel("Track's size")
         ax.set_ylabel("Occurrences")
         ax.set_title("Tracks sizes histogram")
+        plt.draw()
         # Ask if satisfy with distribution
         satisfied = raw_input("Satisfied by the distribution? (y/n): ").lower()
         if satisfied in 'yes':
