@@ -19,21 +19,22 @@ feature_params = dict(maxCorners=500,  # what are those?
 #  ref. http://docs.opencv.org/2.4/modules/imgproc/doc/feature_detection.html?highlight=goodfeaturestotrack
 
 
-def motion_tracking_Lucas_Kanade(tracks, frame_idx, prev_gray, greyScaleMask,
+def motion_tracking_Lucas_Kanade(tracks, frameIdx, frame_id, prev_gray, greyScaleMask,
                                  minTrackLength=100, detect_interval=5,
                                  lk_params=lk_params, feature_params=feature_params, debug=False):
     """
     Tracks motion with Lucas-Kanade sparse optical flow and returns obhects trajectories
 
     :param tracks: List of trajectories
-    :param frame_idx: Frame's index
+    :param frameIdx: List of frame indexes
+    :param frame_id: Frame's index
     :param prev_gray: Previous grey frame
     :param greyScaleMask: Grey frame
     :param minTrackLength: minimum length criteria for track's storage
     :param detect_interval: Frame interval for robust tracking
     :param lk_params: See ref. http://docs.opencv.org/2.4/modules/imgproc/doc/feature_detection.html?highlight=goodfeaturestotrack
     :param feature_params: See http://docs.opencv.org/2.4/modules/imgproc/doc/feature_detection.html?highlight=goodfeaturestotrack
-    :return: tracks
+    :return: tracks & frameIdx
     """
 
     if debug:
@@ -46,20 +47,25 @@ def motion_tracking_Lucas_Kanade(tracks, frame_idx, prev_gray, greyScaleMask,
         d = abs(p0 - p0r).reshape(-1, 2).max(-1)
         good = d < 1
         new_tracks = []
-        for tr, (x, y), good_flag in zip(tracks, p1.reshape(-1, 2), good):
+        new_frameIdx = []
+        for tr, ts, (x, y), good_flag in zip(tracks, frameIdx, p1.reshape(-1, 2), good):
             if not good_flag:
                 # Check here and make sure long tracks do not diseappear
                 if len(tr) > minTrackLength:
                     new_tracks.append(tr)
+                    new_frameIdx.append(ts)
                 continue
             tr.append((x, y))
             new_tracks.append(tr)
+            ts.append(frame_id)
+            new_frameIdx.append(ts)
             if debug:
                 cv2.circle(gsm, (x, y), 2, (0, 255, 0), -1)
         tracks = new_tracks
+        frameIdx = new_frameIdx
     # optical flow finds the next point which may look close to it.
     # So for a robust tracking, corner points are detected at every detect_interval frames.
-    if frame_idx % detect_interval == 0:
+    if frame_id % detect_interval == 0:
         mask = np.zeros_like(greyScaleMask)
         mask[:] = 255
         for x, y in [np.int32(tr[-1]) for tr in tracks]:
@@ -68,6 +74,7 @@ def motion_tracking_Lucas_Kanade(tracks, frame_idx, prev_gray, greyScaleMask,
         if p is not None:  # if new tracks it adds it
             for x, y in np.float32(p).reshape(-1, 2):
                 tracks.append([(x, y)])
+                frameIdx.append([frame_id])
 
     if debug:
         cv2.namedWindow('motion tracking', cv2.WINDOW_NORMAL)
@@ -80,4 +87,4 @@ def motion_tracking_Lucas_Kanade(tracks, frame_idx, prev_gray, greyScaleMask,
         cv2.putText(gsm, s, (x, y), cv2.FONT_HERSHEY_PLAIN, 1.0, (255, 255, 255), lineType=cv2.LINE_AA)
         cv2.imshow('motion tracking', gsm)
 
-    return tracks
+    return tracks, frameIdx

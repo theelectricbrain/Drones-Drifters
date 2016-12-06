@@ -9,11 +9,14 @@ from pyproj import Proj, pj_list
 from imgprocess.image_filtering import *
 from traj.motion_tracking import *
 from misc.utilities import *
+from misc.read_input_files import *
+from georef.geo_referencing import *
 # Quick fix
 from skvideo.io import VideoCapture
 
 ### Syncronisation and video splitting block ###
 # TODO: to be developed
+# UAV, CAP classes will be defined by synchronisation of the LOG class
 
 ### Video processing block ###
 # Debug flag
@@ -22,10 +25,20 @@ debug=True
 # Save Frames
 saveFrames = False
 
+# UAV attributes and parameters
+#  TODO: UAV Attributes to retrieve from log.
+uav = UAV("test_file.log", debug=debug)
+#  Manual attributes definition. THis step will be looped
+uav.centreCoordinates = (-66.33558489, 44.28223669) # (lon., lat.) in decimal degrees. Convention
+uav.yaw = np.deg2rad(10.0)  # in radian. Convention?
+uav.vertiFOV = np.deg2rad(61.9)  # in rad.
+uav.horiFOV = np.deg2rad(82.4)  # in rad.
+uav.altitude = 300.0 / 3.28 # in meters (feet to meter conversion here). Convention?
+#uav.timeRef = datetime(2016, 12, 01)
+
 # Video capture
-# cap = cv2.VideoCapture("/home/grumpynounours/Desktop/Electric_Brain/measurements/pumkin_passing_cut.avi")
-# quick fix
-cap = VideoCapture("/home/grumpynounours/Desktop/Electric_Brain/measurements/pumkin_passing_test.MOV")
+#   Manual defined. THis step will be looped
+cap = CAP("/home/grumpynounours/Desktop/Electric_Brain/measurements/pumkin_passing_test.MOV")
 
 # Color detection attributes
 colorDetect = False  # perform color detection yes/no, true/false
@@ -63,8 +76,8 @@ detect_interval = 5  # Default value = 5.
 
 # Initialise loop through video frames
 tracks = []
-frame_idx = 0
-for l in range(cap.info['streams'][0]['nb_frames']):
+frameIdx = []
+for frame_id in range(cap.nbFrames):
     ret, frame = cap.read()
     if ret:
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -92,15 +105,17 @@ for l in range(cap.info['streams'][0]['nb_frames']):
         if len(tracks) == 0:
             prev_gray = greyScaleMask
         if not circleDetection:
-            tracks = motion_tracking_Lucas_Kanade(tracks, frame_idx, prev_gray, greyScaleMask,
-                                                  minTrackLength=minTrackLength, detect_interval=detect_interval,
-                                                  lk_params=lk_params, feature_params=feature_params, debug=debug)
+            tracks, times = motion_tracking_Lucas_Kanade(tracks, frameIdx, frame_id, prev_gray, greyScaleMask,
+                                                         minTrackLength=minTrackLength,
+                                                         detect_interval=detect_interval,
+                                                         lk_params=lk_params,
+                                                         feature_params=feature_params,
+                                                         debug=debug)
         else:
             #TODO implement alternative motion tracker
             print("Option not supported yet. Alternative motion tracker needed:", sys.exc_info()[0])
             raise
         # Incrementation
-        frame_idx += 1
         prev_gray = greyScaleMask
 
         # Breaking for loop
@@ -109,70 +124,38 @@ for l in range(cap.info['streams'][0]['nb_frames']):
             break
         # Save Video
         if saveFrames:
-            cv2.imwrite("image"+str(l).zfill(4)+".png", rgb)
+            cv2.imwrite("image"+str(frame_id).zfill(4)+".png", rgb)
+
 # Release everything if job is finished
 cap.release()
 cv2.destroyAllWindows()
 
-# Turn tracks list into array
+# Turn tracks and frameIdx list into array
 tracks = np.asarray(tracks)
+frameIdx = np.asarray(frameIdx)
 
 # Filtering and selecting trajectories
 #  Selection through trajectories' sizes histogram
-tracks = tracks_sizes_selection(tracks, rgb)
+tracks, frameIdx = tracks_sizes_selection(tracks, frameIdx, rgb)
 # TODO: Code interface/user-input based tracks selection
 
 ### Geo-referencing block ###
-# Need this before of tuples
-tempTracks = []
-for tr in tracks:
-    tempTracks.append([])
-# TODO: to be developed
-# TODO: Import Tracks in panda frame and start working on them (georef, resampling,...)
-# Attributes to retrieve from log. TODO: define class UAV
-centreCoordinates = (-66.33558489, 44.28223669) # (lon., lat.) in decimal degrees. Convention
-yaw = np.deg2rad(10.0)  # in radian. Convention?
-vertiFOV = np.deg2rad(61.9)  # in rad.
-horiFOV = np.deg2rad(82.4)  # in rad.
-altitude = 300.0 / 3.28 # in meters (feet to meter conversion here). Convention?
-nx = float(frame.shape[0])
-ny = float(frame.shape[1])
-horiMpP = (2.0*np.tan(horiFOV/2.0))/nx  # horizontal meters per pixel ratio
-vertiMpP = (2.0*np.tan(vertiFOV/2.0))/ny  # vertical meters per pixel ratio, function of the altitude. Lens correction could be needed here
-#  Relative distance correction with Passive (aka Alias) transformation
-for tr, TR in zip(tracks, tempTracks):
-    for pt in tr:
-        pt = list(pt)
-        x = pt[0] - (nx/2.0)
-        y = pt[1] - (ny/2.0)
-        xr = x*np.cos(yaw) + y*np.sin(yaw)
-        yr = y*np.cos(yaw) - x*np.sin(yaw)
-        TR.append([xr, yr])
-#  Conversion deg. to m.
-proj = raw_input("Is the projection UTM (yes/no)?: ").upper()
-if proj in "YES":
-    proj = 'utm'
-else:
-    print "Choose a coordinate projection from the following list:"
-    for key in pj_list:
-        print key + ": " + pj_list[key]
-    proj = raw_input("Type in the coordinate projection: ")
-myproj = Proj(proj=proj)
-xc, yc = myproj(centreCoordinates[0], centreCoordinates[1])
-#  Absolute distance and conversion m. to deg.
-for tr in tempTracks:
-    for pt in tr:
-        lon, lat = myproj(xc + pt[0], yc + pt[1], inverse=True)
-        pt[0] = lon
-        pt[1] = lat
-# Need this before of tuples
-tracks = []
-for tr in tempTracks:
-    tracks.append([])
-for tr, TR in zip(tempTracks, tracks):
-    for pt in tr:
-        TR.append(tuple(pt))
-del tempTracks
+tracks = geo_ref_tracks(tracks, frame, uav, debug=False)
+
+### Compute flow velocities ###
+# TODO: use pandas dataframe to store sparse tracks, resample on given frequency, compute (u, v)
+import pandas as pd
+from datetime import datetime, timedelta
+uav.timeRef = datetime(2016, 12, 01)
+d = {}
+for ii, tr, fi in zip(range(len(tracks)), tracks, frameIdx):
+    timeRef = []
+    for idx in fi:
+        timeRef.append(uav.timeRef + timedelta(seconds=idx * (1.0/cap.fps)))
+    d['track'+str(ii)] = pd.Series(tr, index=timeRef)
+df = pd.DataFrame(d)
+
+# TODO: bug upstream. len(tr) not = len(fi)
 
 ### Exportation block ###
-# TODO: to be developed
+# TODO: Use same format as in/home/grumpynounours/Desktop/Github/PySeidon_dvt/data4tutorial/drifter_GP_01aug2013.mat and drifterclass

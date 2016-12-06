@@ -7,16 +7,18 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-def tracks_sizes_selection(tracks, rgb):
+def tracks_sizes_selection(tracks, frameIdx, rgb):
     """
     Shows final frame with tracks and tracks' length histogram.
     Filters tracks based on their size
-    :param tracks: objects' tracks, 1D numpy array
+    :param tracks: drifters' tracks, 1D numpy array
+    :param frameIdx: frames' indexes, 1D numpy array
     :param rgb: RGB frame
-    :return: Filtered tracks
+    :return: Filtered tracks and frames' indexes
     """
     # Turn tracks list into array
     tracks = np.asarray(tracks)
+    frameIdx = np.asarray(frameIdx)
     # Checking and filtering trajectories
     cv2.namedWindow('Trajectories', cv2.WINDOW_NORMAL)
     cv2.resizeWindow('Trajectories', 1200, 1200)
@@ -47,6 +49,7 @@ def tracks_sizes_selection(tracks, rgb):
             upLimit = float(raw_input("Delete trajectories greater than (integer): "))
             indexes = np.where(np.logical_or(tracksSize < lowLimit, tracksSize > upLimit))
             tracks = np.delete(tracks, indexes)
+            frameIdx = np.delete(frameIdx, indexes)
             plt.cla()
 
-    return tracks
+    return tracks, frameIdx

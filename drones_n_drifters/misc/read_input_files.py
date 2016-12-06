@@ -2,10 +2,13 @@
 # encoding: utf-8
 
 from __future__ import division
+from skvideo.io import VideoCapture
+import numpy as np
+
 
 class UAV:
     def __init__(self, logFileName, debug=False):
-
+        self._debug = debug
         # Bunch of metadata related to the drone itself
         self.model = raw_input("What is the UAV's model type (Phantom 3, Iris,...)?: ").upper().replace(" ", "")
         # FOV (Field Of View). Assuming automatic vertical alignment of the camera
@@ -18,6 +21,19 @@ class UAV:
         self.roll = None  # longitudinal axis rotation in degrees. Convention?
         self.pitch = None  # lateral axis rotation in degrees. Convention?
         self.yaw = None  # vertical axis rotation in degrees. North = 0deg. Convention?
-        #
+        #  Not sure which convention here!
         self.altitude = None # in meters. from ground up
+        # Reference time of the log
+        self.timeRef = None  # in datetime
 
+class CAP(VideoCapture):
+    def __init__(self, videoFileName, debug=False):
+        # cv2.VideoCapture.__init__(self, videoFileName)
+        # Does not work on my machine! \Quick fix using VideoCapture from skvideo
+        VideoCapture.__init__(self, videoFileName)
+        # Sub-class attributes
+        self._debug = debug
+        self.videoFileName = videoFileName
+        self.nbFrames = self.info['streams'][0]['nb_frames']
+        self.fps = int(np.round(self.nbFrames/float(self.info['format']['duration'])))
+        # self.timeRef = None  # in datetime
