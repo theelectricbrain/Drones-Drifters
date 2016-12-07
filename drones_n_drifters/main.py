@@ -105,7 +105,7 @@ for frame_id in range(cap.nbFrames):
         if len(tracks) == 0:
             prev_gray = greyScaleMask
         if not circleDetection:
-            tracks, times = motion_tracking_Lucas_Kanade(tracks, frameIdx, frame_id, prev_gray, greyScaleMask,
+            tracks, frameIdx = motion_tracking_Lucas_Kanade(tracks, frameIdx, frame_id, prev_gray, greyScaleMask,
                                                          minTrackLength=minTrackLength,
                                                          detect_interval=detect_interval,
                                                          lk_params=lk_params,
@@ -140,22 +140,42 @@ tracks, frameIdx = tracks_sizes_selection(tracks, frameIdx, rgb)
 # TODO: Code interface/user-input based tracks selection
 
 ### Geo-referencing block ###
-tracks = geo_ref_tracks(tracks, frame, uav, debug=False)
+tracks, tracksInM = geo_ref_tracks(tracks, frame, uav, debug=False)
 
 ### Compute flow velocities ###
 # TODO: use pandas dataframe to store sparse tracks, resample on given frequency, compute (u, v)
 import pandas as pd
 from datetime import datetime, timedelta
+rw = '1S'  # re-sampling time window
 uav.timeRef = datetime(2016, 12, 01)
+# Defining dict of dataframes
 d = {}
-for ii, tr, fi in zip(range(len(tracks)), tracks, frameIdx):
+for ii, tr, trM, fi in zip(range(len(tracks)), tracks, tracksInM, frameIdx):
     timeRef = []
     for idx in fi:
         timeRef.append(uav.timeRef + timedelta(seconds=idx * (1.0/cap.fps)))
-    d['track'+str(ii)] = pd.Series(tr, index=timeRef)
-df = pd.DataFrame(d)
+    lons = []
+    lats = []
+    xs = []
+    ys = []
+    for pt, ptM in zip(tr, trM):
+        lons.append(pt[0])
+        lats.append(pt[1])
+        xs.append(ptM[0])
+        ys.append(ptM[1])
+    d['track' + str(ii)] = pd.DataFrame({'longitude': lons, 'latitude': lats, 'x': xs, 'y': ys}, index=timeRef)
+    # Resampling
+    d['track' + str(ii)] = d['track' + str(ii)].resample(rw).mean()
+# Computing velocities
+for key in d.keys():
+    d[key]['Time'] = d[key].index.asi8
+    dist = d[key].diff().fillna(0.)
+    dist['Dist'] = np.sqrt(dist.x ** 2 + dist.y ** 2)
+    d[key]['Speed'] = dist.Dist / (dist.Time / 1e9)
+    d[key]['U'] = dist.x / (dist.Time / 1e9)
+    d[key]['V'] = dist.y / (dist.Time / 1e9)
+    d[key] = d[key].drop('Time', axis=1)
 
-# TODO: bug upstream. len(tr) not = len(fi)
-
+#
 ### Exportation block ###
 # TODO: Use same format as in/home/grumpynounours/Desktop/Github/PySeidon_dvt/data4tutorial/drifter_GP_01aug2013.mat and drifterclass

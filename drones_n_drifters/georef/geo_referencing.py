@@ -12,12 +12,14 @@ def geo_ref_tracks(tracks, frame, UAV, debug=False):
     :param tracks: list of drifters' trajectories
     :param frame: CV2 frame
     :param UAV: UAV class object
-    :return: geo-referenced tracks
+    :return: geo-referenced tracks in degrees and meters
     """
     # Need this before of tuples
     tempTracks = []
+    tempTracksInM = []
     for tr in tracks:
         tempTracks.append([])
+        tempTracksInM.append([])
     nx = float(frame.shape[0])
     ny = float(frame.shape[1])
     horiMpP = (2.0*np.tan(UAV.horiFOV/2.0)*UAV.altitude)/nx  # horizontal meters per pixel ratio
@@ -43,18 +45,24 @@ def geo_ref_tracks(tracks, frame, UAV, debug=False):
     myproj = Proj(proj=proj)
     xc, yc = myproj(UAV.centreCoordinates[0], UAV.centreCoordinates[1])
     #  Absolute distance and conversion m. to deg.
-    for tr in tempTracks:
+    # TODO: add relative distance as a return too
+    for tr, trM in zip(tempTracks, tempTracksInM):
         for pt in tr:
-            lon, lat = myproj(xc + pt[0], yc + pt[1], inverse=True)
+            trM.append([pt[0], pt[1]])
+            x, y = xc + pt[0], yc + pt[1]
+            lon, lat = myproj(x, y, inverse=True)
             pt[0] = lon
             pt[1] = lat
     # Need this before of tuples
     tracks = []
+    tracksInM = []
     for tr in tempTracks:
         tracks.append([])
-    for tr, TR in zip(tempTracks, tracks):
-        for pt in tr:
+        tracksInM.append([])
+    for tr, TR, trM, TRM in zip(tempTracks, tracks, tempTracksInM, tracksInM):
+        for pt, ptM in zip(tr, trM):
             TR.append(tuple(pt))
-    del tempTracks
+            TRM.append(tuple(ptM))
+    #del tempTracks, tempTracksInM
 
-    return tracks
+    return tracks, tracksInM
