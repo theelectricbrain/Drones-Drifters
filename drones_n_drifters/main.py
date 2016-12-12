@@ -11,6 +11,7 @@ from traj.motion_tracking import *
 from misc.utilities import *
 from misc.read_input_files import *
 from georef.geo_referencing import *
+from oceano.oceanographic_quantities import *
 # Quick fix
 from skvideo.io import VideoCapture
 
@@ -143,39 +144,7 @@ tracks, frameIdx = tracks_sizes_selection(tracks, frameIdx, rgb)
 tracks, tracksInM = geo_ref_tracks(tracks, frame, uav, debug=False)
 
 ### Compute flow velocities ###
-# TODO: use pandas dataframe to store sparse tracks, resample on given frequency, compute (u, v)
-import pandas as pd
-from datetime import datetime, timedelta
-rw = '1S'  # re-sampling time window
-uav.timeRef = datetime(2016, 12, 01)
-# Defining dict of dataframes
-d = {}
-for ii, tr, trM, fi in zip(range(len(tracks)), tracks, tracksInM, frameIdx):
-    timeRef = []
-    for idx in fi:
-        timeRef.append(uav.timeRef + timedelta(seconds=idx * (1.0/cap.fps)))
-    lons = []
-    lats = []
-    xs = []
-    ys = []
-    for pt, ptM in zip(tr, trM):
-        lons.append(pt[0])
-        lats.append(pt[1])
-        xs.append(ptM[0])
-        ys.append(ptM[1])
-    d['track' + str(ii)] = pd.DataFrame({'longitude': lons, 'latitude': lats, 'x': xs, 'y': ys}, index=timeRef)
-    # Resampling
-    d['track' + str(ii)] = d['track' + str(ii)].resample(rw).mean()
-# Computing velocities
-for key in d.keys():
-    d[key]['Time'] = d[key].index.asi8
-    dist = d[key].diff().fillna(0.)
-    dist['Dist'] = np.sqrt(dist.x ** 2 + dist.y ** 2)
-    d[key]['Speed'] = dist.Dist / (dist.Time / 1e9)
-    d[key]['U'] = dist.x / (dist.Time / 1e9)
-    d[key]['V'] = dist.y / (dist.Time / 1e9)
-    d[key] = d[key].drop('Time', axis=1)
+d = velocities_from_geotracks(uav, cap, tracks, tracksInM, frameIdx, rw='1S', debug=debug)
 
-#
 ### Exportation block ###
 # TODO: Use same format as in/home/grumpynounours/Desktop/Github/PySeidon_dvt/data4tutorial/drifter_GP_01aug2013.mat and drifterclass

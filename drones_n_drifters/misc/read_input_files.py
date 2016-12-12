@@ -16,11 +16,11 @@ class UAV:
             self.vertiFOV = 61.9  # in degrees
             self.horiFOV = 82.4  # in degrees
         # To be defined once reading through log and video
-        self.centreCoordinates = (None,None)  # (lon., lat.) in decimal degrees. Convention
+        self.centreCoordinates = (None, None)  # (lon., lat.) in decimal degrees. Convention
         #  Convention NED, North-East-Down, X-Y-Z, Roll-Pitch-Yaw.
         self.roll = None  # longitudinal axis rotation in degrees. Convention?
         self.pitch = None  # lateral axis rotation in degrees. Convention?
-        self.yaw = None  # vertical axis rotation in degrees. North = 0deg. Convention?
+        self.yaw = None  # vertical axis rotation in degrees. North = 0deg. Positive clockwise.
         #  Not sure which convention here!
         self.altitude = None # in meters. from ground up
         # Reference time of the log
