@@ -6,6 +6,7 @@ import sys
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+from datetime import timedelta
 
 def tracks_sizes_selection(tracks, frameIdx, rgb):
     """
@@ -53,3 +54,15 @@ def tracks_sizes_selection(tracks, frameIdx, rgb):
             plt.cla()
 
     return tracks, frameIdx
+
+def datetime_to_mattime(list_of_datetimes, debug=False):
+    """Convert list of datetime64[us] to list matlab time"""
+    list_of_datenum = []
+    for dt in list_of_datetimes:
+        mdn = dt + timedelta(days = 366)
+        s = (dt.hour * (60.0*60.0)) + (dt.minute * 60.0) + dt.second
+        day = 24.0*60.0*60.0
+        frac = s/day
+        list_of_datenum.append(mdn.toordinal() + frac)
+
+    return list_of_datenum

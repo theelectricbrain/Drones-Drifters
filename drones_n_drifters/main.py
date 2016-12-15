@@ -30,12 +30,12 @@ saveFrames = False
 #  TODO: UAV Attributes to retrieve from log.
 uav = UAV("test_file.log", debug=debug)
 #  Manual attributes definition. THis step will be looped
-uav.centreCoordinates = (-66.33558489, 44.28223669) # (lon., lat.) in decimal degrees. Convention
-uav.yaw = np.deg2rad(10.0)  # in radian. Convention?
+uav.centreCoordinates = (-66.3406, 44.2564557)  # (lon., lat.) in decimal degrees. Convention
+uav.yaw = np.deg2rad(-38.2)  # in radian. Convention?
 uav.vertiFOV = np.deg2rad(61.9)  # in rad.
 uav.horiFOV = np.deg2rad(82.4)  # in rad.
-uav.altitude = 300.0 / 3.28 # in meters (feet to meter conversion here). Convention?
-#uav.timeRef = datetime(2016, 12, 01)
+uav.altitude = 11.4  # in meters (feet to meter conversion here). Convention?
+uav.timeRef = datetime(2016, 12, 01)
 
 # Video capture
 #   Manual defined. THis step will be looped
@@ -148,3 +148,30 @@ d = velocities_from_geotracks(uav, cap, tracks, tracksInM, frameIdx, rw='1S', de
 
 ### Exportation block ###
 # TODO: Use same format as in/home/grumpynounours/Desktop/Github/PySeidon_dvt/data4tutorial/drifter_GP_01aug2013.mat and drifterclass
+# Export to kmz
+
+# Export to matlab (based on drifters' file format)
+d4mat = {}
+d4mat['comments'] = ["trajectories from pumpkins"]
+d4mat['comments'].append("reference time: " + uav.timeRef.strftime("%Y-%m-%d %H:%M:%S"))
+u = []
+v = []
+lon = []
+lat = []
+times = []
+for key in d.keys():
+    u.extend(d[key]['U'].tolist())
+    v.extend(d[key]['V'].tolist())
+    lon.extend(d[key]['longitude'].tolist())
+    lat.extend(d[key]['latitude'].tolist())
+    times.extend(datetime_to_mattime(d[key].index.tolist()))
+d4mat['velocity'] = {}
+d4mat['velocity']['u'] = np.asarray(u)
+d4mat['velocity']['v'] = np.asarray(v)
+d4mat['velocity']['vel_lon'] = np.asarray(lon)
+d4mat['velocity']['vel_lat'] = np.asarray(lat)
+d4mat['velocity']['vel_time'] = np.asarray(times)
+
+from scipy.io import savemat
+matfile = 'test_pyseidon_drifter.mat'
+savemat(matfile, d4mat)
