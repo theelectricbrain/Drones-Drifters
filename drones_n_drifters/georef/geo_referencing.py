@@ -14,24 +14,40 @@ def geo_ref_tracks(tracks, frame, UAV, debug=False):
     :param UAV: UAV class object
     :return: geo-referenced tracks in degrees and meters
     """
+    # Meter per pixel ratio
+    # TODO: Lens correction could be needed here
+    diagLength = 2.0 * np.tan(np.deg2rad(UAV.FOV/2.0)) * UAV.altitude
+    nx = float(frame.shape[0])
+    ny = float(frame.shape[1])
+    phi = np.arctan(ny / nx)
+    horiMpP = diagLength * np.cos(phi) / nx  # horizontal meters per pixel ratio
+    vertiMpP = diagLength * np.sin(phi) / ny  # vertical meters per pixel ratio.
+    yaw = np.abs(np.deg2rad(UAV.yaw))
+    if UAV.yaw > 0.0:
+        alibi = True
+    else:
+        alibi = False
     # Need this before of tuples
     tempTracks = []
     tempTracksInM = []
     for tr in tracks:
         tempTracks.append([])
         tempTracksInM.append([])
-    nx = float(frame.shape[0])
-    ny = float(frame.shape[1])
-    horiMpP = (2.0*np.tan(UAV.horiFOV/2.0)*UAV.altitude)/nx  # horizontal meters per pixel ratio
-    vertiMpP = (2.0*np.tan(UAV.vertiFOV/2.0)*UAV.altitude)/ny  # vertical meters per pixel ratio, function of the altitude. Lens correction could be needed here
-    #  Relative distance correction with Passive (aka Alias) transformation
+    #  Relative distance
+    # TODO: bug here
     for tr, TR in zip(tracks, tempTracks):
         for pt in tr:
             pt = list(pt)
             x = (pt[0] - (nx/2.0)) * horiMpP
             y = (pt[1] - (ny/2.0)) * vertiMpP
-            xr = x*np.cos(UAV.yaw) + y*np.sin(UAV.yaw)
-            yr = y*np.cos(UAV.yaw) - x*np.sin(UAV.yaw)
+            if alibi:
+                # Correction with Active (aka Alibi) transformation
+                xr = x * np.cos(yaw) - y * np.sin(yaw)
+                yr = x * np.sin(yaw) + y * np.cos(yaw)
+            else:
+                # Correction with Passive (aka Alias) transformation
+                xr = x*np.cos(yaw) + y*np.sin(yaw)
+                yr = y*np.cos(yaw) - x*np.sin(yaw)
             TR.append([xr, yr])
     #  Conversion deg. to m.
     proj = raw_input("Is the projection UTM (yes/no)?: ").upper()

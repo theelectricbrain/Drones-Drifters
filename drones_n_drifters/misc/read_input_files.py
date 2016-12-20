@@ -13,8 +13,9 @@ class UAV:
         self.model = raw_input("What is the UAV's model type (Phantom 3, Iris,...)?: ").upper().replace(" ", "")
         # FOV (Field Of View). Assuming automatic vertical alignment of the camera
         if "PHANTOM3" in self.model:
-            self.vertiFOV = 61.9  # in degrees
-            self.horiFOV = 82.4  # in degrees
+            #self.vertiFOV = 61.9  # in degrees
+            #self.horiFOV = 82.4  # in degrees
+            self.FOV = 94.0  # in degrees
         # To be defined once reading through log and video
         self.centreCoordinates = (None, None)  # (lon., lat.) in decimal degrees. Convention
         #  Convention NED, North-East-Down, X-Y-Z, Roll-Pitch-Yaw.

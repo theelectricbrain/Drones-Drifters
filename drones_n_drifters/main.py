@@ -31,10 +31,11 @@ saveFrames = False
 uav = UAV("test_file.log", debug=debug)
 #  Manual attributes definition. THis step will be looped
 uav.centreCoordinates = (-66.3406, 44.2564557)  # (lon., lat.) in decimal degrees. Convention
-uav.yaw = np.deg2rad(-38.2)  # in radian. Convention?
-uav.vertiFOV = np.deg2rad(61.9)  # in rad.
-uav.horiFOV = np.deg2rad(82.4)  # in rad.
-uav.altitude = 11.4  # in meters (feet to meter conversion here). Convention?
+uav.yaw = -38.2  # in radian. Convention?
+#uav.vertiFOV = np.deg2rad(61.9)  # in rad.
+#uav.horiFOV = np.deg2rad(82.4)  # in rad.
+uav.FOV = 94.0  # in deg.
+uav.altitude = 111.4  # in meters (feet to meter conversion here). Convention?
 uav.timeRef = datetime(2016, 12, 01)
 
 # Video capture
