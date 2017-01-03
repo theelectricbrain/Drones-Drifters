@@ -142,18 +142,18 @@ tracks, frameIdx = tracks_sizes_selection(tracks, frameIdx, rgb)
 # TODO: Code interface/user-input based tracks selection
 
 ### Geo-referencing block ###
-# TODO: there is a bug here
-tracks, tracksInM = geo_ref_tracks(tracks, frame, uav, debug=False)
+tracksInDeg, tracksInM = geo_ref_tracks(tracks, frame, uav, debug=False)
 
 ### Compute flow velocities ###
-d = velocities_from_geotracks(uav, cap, tracks, tracksInM, frameIdx, rw='1S', debug=debug)
+# TODO: Debug from here
+d = velocities_from_geotracks(uav, cap, tracksInDeg, tracksInM, frameIdx, rw='1S', debug=debug)
 
 ### Exportation block ###
 # TODO: Use same format as in/home/grumpynounours/Desktop/Github/PySeidon_dvt/data4tutorial/drifter_GP_01aug2013.mat and drifterclass
 # Export to kmz
 import simplekml
 kml = simplekml.Kml()
-for ii, tr in enumerate(tracks):
+for ii, tr in enumerate(tracksInDeg):
     lin = kml.newlinestring(name="Trajectory "+str(ii), coords=tr)
 kml.save("/home/grumpynounours/Desktop/test.kml")
 
