@@ -6,21 +6,20 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 
-def velocities_from_geotracks(uav, cap, tracks, tracksInM, frameIdx, rw='1S', debug=False):
+def velocities_from_geotracks(uav, cap, tracksInDeg, tracksInM, frameIdx, rw='1S', debug=False):
     """
     Computes flow velocities from geo-referenced drifter's trajectories
     :param uav: UAV object
     :param cap: CAP object
-    :param tracks: Drifter's trajectories, in Deg.
+    :param tracksInDeg: Drifter's trajectories, in Deg.
     :param tracksInM: Drifter's trajectories, in m.
     :param frameIdx: Video frames' indexes
     :param rw: resampling window, '1S' = one second
     :return: dictionary of dataframes
     """
-    uav.timeRef = datetime(2016, 12, 01)
     # Defining dict of dataframes
     d = {}
-    for ii, tr, trM, fi in zip(range(len(tracks)), tracks, tracksInM, frameIdx):
+    for ii, tr, trM, fi in zip(range(len(tracksInDeg)), tracksInDeg, tracksInM, frameIdx):
         timeRef = []
         for idx in fi:
             timeRef.append(uav.timeRef + timedelta(seconds=idx * (1.0/cap.fps)))

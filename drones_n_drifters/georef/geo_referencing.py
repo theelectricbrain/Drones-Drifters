@@ -28,13 +28,13 @@ def geo_ref_tracks(tracks, frame, UAV, debug=False):
         alibi = False
     yaw = np.abs(np.deg2rad(UAV.yaw))
     # Need this before of tuples
-    tempTracks = []
+    tempTracksInDeg = []
     tempTracksInM = []
     for tr in tracks:
-        tempTracks.append([])
+        tempTracksInDeg.append([])
         tempTracksInM.append([])
     #  Relative distance
-    for tr, TR in zip(tracks, tempTracks):
+    for tr, TR in zip(tracks, tempTracksInM):
         for pt in tr:
             pt = list(pt)
             x = (pt[0] - (nx/2.0)) * horiMpP
@@ -64,23 +64,21 @@ def geo_ref_tracks(tracks, frame, UAV, debug=False):
         myproj = Proj(proj=proj, ellps=ellps)
     xc, yc = myproj(UAV.centreCoordinates[0], UAV.centreCoordinates[1])
     #  Absolute distance and conversion m. to deg.
-    for tr, trM in zip(tempTracks, tempTracksInM):
-        for pt in tr:
-            trM.append([pt[0], pt[1]])
-            x, y = xc + pt[0], yc + pt[1]
+    for tr, trM in zip(tempTracksInDeg, tempTracksInM):
+        for ptM in trM:
+            x, y = xc + ptM[0], yc + ptM[1]
             lon, lat = myproj(x, y, inverse=True)
-            pt[0] = lon
-            pt[1] = lat
+            tr.append([lon, lat])
     # Need this before of tuples
-    tracks = []
+    tracksInDeg = []
     tracksInM = []
-    for tr in tempTracks:
-        tracks.append([])
+    for tr in tempTracksInDeg:
+        tracksInDeg.append([])
         tracksInM.append([])
-    for tr, TR, trM, TRM in zip(tempTracks, tracks, tempTracksInM, tracksInM):
+    for tr, TR, trM, TRM in zip(tempTracksInDeg, tracksInDeg, tempTracksInM, tracksInM):
         for pt, ptM in zip(tr, trM):
             TR.append(tuple(pt))
             TRM.append(tuple(ptM))
-    #del tempTracks, tempTracksInM
+    #del tempTracksInDeg, tempTracksInM
 
-    return tracks, tracksInM
+    return tracksInDeg, tracksInM

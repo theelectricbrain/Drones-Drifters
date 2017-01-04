@@ -12,8 +12,13 @@ from misc.utilities import *
 from misc.read_input_files import *
 from georef.geo_referencing import *
 from oceano.oceanographic_quantities import *
+from misc.write_files import *
 # Quick fix
 from skvideo.io import VideoCapture
+
+### Exportation info ###
+kmlName = "/home/grumpynounours/Desktop/test.kml"
+matName = "/home/grumpynounours/Desktop/test_pyseidon_drifter.mat"
 
 ### Syncronisation and video splitting block ###
 # TODO: to be developed
@@ -142,43 +147,16 @@ tracks, frameIdx = tracks_sizes_selection(tracks, frameIdx, rgb)
 # TODO: Code interface/user-input based tracks selection
 
 ### Geo-referencing block ###
+# TODO: Debug from here
 tracksInDeg, tracksInM = geo_ref_tracks(tracks, frame, uav, debug=False)
 
 ### Compute flow velocities ###
-# TODO: Debug from here
 d = velocities_from_geotracks(uav, cap, tracksInDeg, tracksInM, frameIdx, rw='1S', debug=debug)
+# TODO: unknown bug - u and v inversed !!!
 
 ### Exportation block ###
-# TODO: Use same format as in/home/grumpynounours/Desktop/Github/PySeidon_dvt/data4tutorial/drifter_GP_01aug2013.mat and drifterclass
 # Export to kmz
-import simplekml
-kml = simplekml.Kml()
-for ii, tr in enumerate(tracksInDeg):
-    lin = kml.newlinestring(name="Trajectory "+str(ii), coords=tr)
-kml.save("/home/grumpynounours/Desktop/test.kml")
+write2kml(tracksInDeg, kmlName)
 
 # Export to matlab (based on drifters' file format)
-d4mat = {}
-d4mat['comments'] = ["trajectories from pumpkins"]
-d4mat['comments'].append("reference time: " + uav.timeRef.strftime("%Y-%m-%d %H:%M:%S"))
-u = []
-v = []
-lon = []
-lat = []
-times = []
-for key in d.keys():
-    u.extend(d[key]['U'].tolist())
-    v.extend(d[key]['V'].tolist())
-    lon.extend(d[key]['longitude'].tolist())
-    lat.extend(d[key]['latitude'].tolist())
-    times.extend(datetime_to_mattime(d[key].index.tolist()))
-d4mat['velocity'] = {}
-d4mat['velocity']['u'] = np.asarray(u)
-d4mat['velocity']['v'] = np.asarray(v)
-d4mat['velocity']['vel_lon'] = np.asarray(lon)
-d4mat['velocity']['vel_lat'] = np.asarray(lat)
-d4mat['velocity']['vel_time'] = np.asarray(times)
-
-from scipy.io import savemat
-matfile = 'test_pyseidon_drifter.mat'
-savemat(matfile, d4mat)
+write2drifter(d, uav, matName)
