@@ -20,16 +20,12 @@ from skvideo.io import VideoCapture
 kmlName = "/home/grumpynounours/Desktop/test.kml"
 matName = "/home/grumpynounours/Desktop/test_pyseidon_drifter.mat"
 
-### Syncronisation and video splitting block ###
-# TODO: to be developed
-# UAV, CAP classes will be defined by synchronisation of the LOG class
-
-### Video processing block ###
 # Debug flag
 debug=True
 
-# Save Frames
-saveFrames = False
+### Syncronisation and video splitting block ###
+# TODO: to be developed
+# UAV, CAP classes will be defined by synchronisation of the LOG class
 
 # UAV attributes and parameters
 #  TODO: UAV Attributes to retrieve from log.
@@ -47,10 +43,15 @@ uav.timeRef = datetime(2016, 12, 01)
 #   Manual defined. THis step will be looped
 cap = CAP("/home/grumpynounours/Desktop/Electric_Brain/measurements/pumkin_passing_test.MOV")
 
+### Video processing block ###
+# Save Frames
+saveFrames = False
+
 # Color detection attributes
 colorDetect = False  # perform color detection yes/no, true/false
 #  RBG range value for Orange pumkin
 colorBounds = ([180, 60, 0], [240, 220, 250])  # shades of orange
+# TODO: use HSV instead of RGB
 
 # White patches masking attributes
 maskOutWhitePatches = True
@@ -88,12 +89,21 @@ for frame_id in range(cap.nbFrames):
     ret, frame = cap.read()
     if ret:
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        ## Detection ##
         # Color detection, here pumkin orange
         if colorDetect:
+            # TODO: use HSV instead of RGB
             greyScaleMask = color_detection(rgb, colorBounds=colorBounds, debug=debug)
         else:
             greyScaleMask = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
+        # Shape detection
+        if circleDetection:
+            circleMask = circle_detection(rgb, minArea, maxArea, debug=debug)
+            # Resulting mask
+            greyScaleMask = cv2.bitwise_and(greyScaleMask, greyScaleMask, mask=circleMask)
+
+        ## Filtering ##
         # Mask-out white
         if maskOutWhitePatches:
             dilatedMaskWhite = white_patches_masking(rgb, whiteBounds=whiteBounds,
@@ -102,13 +112,7 @@ for frame_id in range(cap.nbFrames):
             # Resulting mask
             greyScaleMask = cv2.bitwise_and(greyScaleMask, greyScaleMask, mask=dilatedMaskWhite)
 
-        # Shape detection
-        if circleDetection:
-            circleMask = circle_detection(rgb, minArea, maxArea, debug=debug)
-            # Resulting mask
-            greyScaleMask = cv2.bitwise_and(greyScaleMask, greyScaleMask, mask=circleMask)
-
-        # Motion tracking
+        ## Motion tracking ##
         if len(tracks) == 0:
             prev_gray = greyScaleMask
         if not circleDetection:
