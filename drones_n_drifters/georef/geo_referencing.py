@@ -6,35 +6,35 @@ import numpy as np
 from pyproj import Proj, pj_list, pj_ellps
 
 
-def geo_ref_tracks(tracks, frame, UAV, debug=False):
+def geo_ref_tracks(tracks, frame, uav, debug=False):
     """
     Geo-references tracks'points
     :param tracks: list of drifters' trajectories
     :param frame: CV2 frame
-    :param UAV: UAV class object
-    :return: geo-referenced tracks in degrees and meters
+    :param uav: UAV class object
+    :return: geo-referenced tracks in degrees and tracks relative to center point in meters
     """
     # Meter per pixel ratio
     # TODO: Lens correction could be needed here
-    diagLength = 2.0 * np.tan(np.deg2rad(UAV.FOV/2.0)) * UAV.altitude
+    diagLength = 2.0 * np.tan(np.deg2rad(uav.FOV/2.0)) * uav.altitude
     nx = float(frame.shape[1])
     ny = float(frame.shape[0])
     phi = np.arctan(ny / nx)
     horiMpP = diagLength * np.cos(phi) / nx  # horizontal meters per pixel ratio
     vertiMpP = diagLength * np.sin(phi) / ny  # vertical meters per pixel ratio.
-    if UAV.yaw > 0.0:  # UAV convention
+    if uav.yaw > 0.0:  # UAV convention
         alibi = True
     else:
         alibi = False
-    yaw = np.abs(np.deg2rad(UAV.yaw))
+    yaw = np.abs(np.deg2rad(uav.yaw))
     # Need this before of tuples
-    tempTracksInDeg = []
-    tempTracksInM = []
+    tracksInDeg = []
+    tracksInRelativeM = []
     for tr in tracks:
-        tempTracksInDeg.append([])
-        tempTracksInM.append([])
+        tracksInDeg.append([])
+        tracksInRelativeM.append([])
     #  Relative distance
-    for tr, TR in zip(tracks, tempTracksInM):
+    for tr, TR in zip(tracks, tracksInRelativeM):
         for pt in tr:
             pt = list(pt)
             x = (pt[0] - (nx/2.0)) * horiMpP
@@ -62,23 +62,23 @@ def geo_ref_tracks(tracks, frame, UAV, debug=False):
             print key + ": " + pj_list[key]
         ellps = raw_input("Type in the coordinate ellipse: ")
         myproj = Proj(proj=proj, ellps=ellps)
-    xc, yc = myproj(UAV.centreCoordinates[0], UAV.centreCoordinates[1])
+    xc, yc = myproj(uav.centreCoordinates[0], uav.centreCoordinates[1])
     #  Absolute distance and conversion m. to deg.
-    for tr, trM in zip(tempTracksInDeg, tempTracksInM):
+    for tr, trM in zip(tracksInDeg, tracksInRelativeM):
         for ptM in trM:
             x, y = xc + ptM[0], yc + ptM[1]
             lon, lat = myproj(x, y, inverse=True)
             tr.append([lon, lat])
-    # Need this before of tuples
-    tracksInDeg = []
-    tracksInM = []
-    for tr in tempTracksInDeg:
-        tracksInDeg.append([])
-        tracksInM.append([])
-    for tr, TR, trM, TRM in zip(tempTracksInDeg, tracksInDeg, tempTracksInM, tracksInM):
-        for pt, ptM in zip(tr, trM):
-            TR.append(tuple(pt))
-            TRM.append(tuple(ptM))
-    #del tempTracksInDeg, tempTracksInM
+    #  Recompute relative distance in new referential
+    tracksInRelativeM = []
+    for tr in tracks:
+        tracksInRelativeM.append([])
+    lat2m = 110.54 * 1000.0
+    lon2m = 111.320 * 1000.0 * np.cos(np.deg2rad(uav.centreCoordinates[1]))
+    for tr, trM in zip(tracksInDeg, tracksInRelativeM):
+        for pt in tr:
+            x = lon2m * (pt[0] - uav.centreCoordinates[0])
+            y = lat2m * (pt[1] - uav.centreCoordinates[1])
+            trM.append([x, y])
 
-    return tracksInDeg, tracksInM
+    return tracksInDeg, tracksInRelativeM

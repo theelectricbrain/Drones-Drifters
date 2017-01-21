@@ -42,7 +42,7 @@ def tracks_sizes_selection(tracks, frameIdx, rgb):
         ax.set_title("Tracks sizes histogram")
         plt.draw()
         # Ask if satisfy with distribution
-        satisfied = raw_input("Satisfied by the distribution? (y/n): ").lower()
+        satisfied = raw_input("Satisfied by the distribution? (yes/no): ").lower()
         if satisfied in 'yes':
             keepOn = False
         else:

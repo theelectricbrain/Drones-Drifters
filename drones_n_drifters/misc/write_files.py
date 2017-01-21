@@ -36,10 +36,8 @@ def write2drifter(d, uav, matName):
     times = []
     # TODO: unknown bug - u and v inversed !!!
     for key in d.keys():
-        # u.extend(d[key]['U'].tolist())
-        # v.extend(d[key]['V'].tolist())
-        u.extend(d[key]['V'].tolist())
-        v.extend(d[key]['U'].tolist())
+        u.extend(d[key]['U'].tolist())
+        v.extend(d[key]['V'].tolist())
         lon.extend(d[key]['longitude'].tolist())
         lat.extend(d[key]['latitude'].tolist())
         times.extend(datetime_to_mattime(d[key].index.tolist()))

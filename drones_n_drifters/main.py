@@ -151,12 +151,10 @@ tracks, frameIdx = tracks_sizes_selection(tracks, frameIdx, rgb)
 # TODO: Code interface/user-input based tracks selection
 
 ### Geo-referencing block ###
-# TODO: Debug from here
-tracksInDeg, tracksInM = geo_ref_tracks(tracks, frame, uav, debug=False)
+tracksInDeg, tracksInRelativeM = geo_ref_tracks(tracks, frame, uav, debug=False)
 
 ### Compute flow velocities ###
-d = velocities_from_geotracks(uav, cap, tracksInDeg, tracksInM, frameIdx, rw='1S', debug=debug)
-# TODO: unknown bug - u and v inversed !!!
+d = velocities_from_geotracks(uav, cap, tracksInDeg, tracksInRelativeM, frameIdx, rw='1S', debug=debug)
 
 ### Exportation block ###
 # Export to kmz
