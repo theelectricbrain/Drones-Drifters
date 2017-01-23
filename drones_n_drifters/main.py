@@ -21,7 +21,7 @@ kmlName = "/home/grumpynounours/Desktop/test.kml"
 matName = "/home/grumpynounours/Desktop/test_pyseidon_drifter.mat"
 
 # Debug flag
-debug=True
+debug = False  # True
 
 ### Syncronisation and video splitting block ###
 # TODO: to be developed

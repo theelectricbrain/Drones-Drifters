@@ -3,7 +3,7 @@
 
 from __future__ import division
 import numpy as np
-from pyproj import Proj, pj_list, pj_ellps
+# from pyproj import Proj, pj_list, pj_ellps
 
 
 def geo_ref_tracks(tracks, frame, uav, debug=False):
@@ -22,7 +22,7 @@ def geo_ref_tracks(tracks, frame, uav, debug=False):
     phi = np.arctan(ny / nx)
     horiMpP = diagLength * np.cos(phi) / nx  # horizontal meters per pixel ratio
     vertiMpP = diagLength * np.sin(phi) / ny  # vertical meters per pixel ratio.
-    if uav.yaw > 0.0:  # UAV convention
+    if uav.yaw < 0.0:  # UAV convention
         alibi = True
     else:
         alibi = False
@@ -48,37 +48,46 @@ def geo_ref_tracks(tracks, frame, uav, debug=False):
                xr = x*np.cos(yaw) + y*np.sin(yaw)
                yr = y*np.cos(yaw) - x*np.sin(yaw)
             TR.append([xr, yr])
-    #  Conversion deg. to m.
-    proj = raw_input("Use default projection UTM/WGS84 (yes/no)?: ").upper()
-    if proj in "YES":
-        myproj = Proj(proj='utm', ellps='WGS84')  # LatLon with WGS84 datum used by GPS units
-    else:
-        print "Choose a coordinate projection from the following list:"
-        for key in pj_list:
-            print key + ": " + pj_list[key]
-        proj = raw_input("Type in the coordinate projection: ")
-        print "Choose a coordinate ellipse from the following list:"
-        for key in pj_list:
-            print key + ": " + pj_list[key]
-        ellps = raw_input("Type in the coordinate ellipse: ")
-        myproj = Proj(proj=proj, ellps=ellps)
-    xc, yc = myproj(uav.centreCoordinates[0], uav.centreCoordinates[1])
-    #  Absolute distance and conversion m. to deg.
+    #  Conversion deg. to m. / Version 2.0
+    y2lat = 1.0 / (110.54 * 1000.0)
+    x2lon = 1.0 / (111.320 * 1000.0 * np.cos(np.deg2rad(uav.centreCoordinates[1])))
+    lonC, latC = uav.centreCoordinates[0], uav.centreCoordinates[1]
     for tr, trM in zip(tracksInDeg, tracksInRelativeM):
         for ptM in trM:
-            x, y = xc + ptM[0], yc + ptM[1]
-            lon, lat = myproj(x, y, inverse=True)
+            lon, lat = lonC + (ptM[0] * x2lon), latC + (ptM[1] * y2lat)
             tr.append([lon, lat])
-    #  Recompute relative distance in new referential
-    tracksInRelativeM = []
-    for tr in tracks:
-        tracksInRelativeM.append([])
-    lat2m = 110.54 * 1000.0
-    lon2m = 111.320 * 1000.0 * np.cos(np.deg2rad(uav.centreCoordinates[1]))
-    for tr, trM in zip(tracksInDeg, tracksInRelativeM):
-        for pt in tr:
-            x = lon2m * (pt[0] - uav.centreCoordinates[0])
-            y = lat2m * (pt[1] - uav.centreCoordinates[1])
-            trM.append([x, y])
+
+    #  Conversion deg. to m. / version 1.0
+    # proj = raw_input("Use default projection UTM/WGS84 (yes/no)?: ").upper()
+    # if proj in "YES":
+    #     myproj = Proj(proj='utm', ellps='WGS84')  # LatLon with WGS84 datum used by GPS units
+    # else:
+    #     print "Choose a coordinate projection from the following list:"
+    #     for key in pj_list:
+    #         print key + ": " + pj_list[key]
+    #     proj = raw_input("Type in the coordinate projection: ")
+    #     print "Choose a coordinate ellipse from the following list:"
+    #     for key in pj_list:
+    #         print key + ": " + pj_list[key]
+    #     ellps = raw_input("Type in the coordinate ellipse: ")
+    #     myproj = Proj(proj=proj, ellps=ellps)
+    # xc, yc = myproj(uav.centreCoordinates[0], uav.centreCoordinates[1])
+    # #  Absolute distance and conversion m. to deg.
+    # for tr, trM in zip(tracksInDeg, tracksInRelativeM):
+    #     for ptM in trM:
+    #         x, y = xc + ptM[0], yc + ptM[1]
+    #         lon, lat = myproj(x, y, inverse=True)
+    #         tr.append([lon, lat])
+    # #  Recompute relative distance in new referential
+    # tracksInRelativeM = []
+    # for tr in tracks:
+    #     tracksInRelativeM.append([])
+    # lat2m = 110.54 * 1000.0
+    # lon2m = 111.320 * 1000.0 * np.cos(np.deg2rad(uav.centreCoordinates[1]))
+    # for tr, trM in zip(tracksInDeg, tracksInRelativeM):
+    #     for pt in tr:
+    #         x = lon2m * (pt[0] - uav.centreCoordinates[0])
+    #         y = lat2m * (pt[1] - uav.centreCoordinates[1])
+    #         trM.append([x, y])
 
     return tracksInDeg, tracksInRelativeM
