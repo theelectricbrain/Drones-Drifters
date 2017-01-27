@@ -5,7 +5,7 @@ from __future__ import division
 import sys
 import cv2
 import numpy as np
-from pyproj import Proj, pj_list
+from progressbar import ProgressBar
 from imgprocess.image_filtering import *
 from traj.motion_tracking import *
 from misc.utilities import *
@@ -19,6 +19,7 @@ from skvideo.io import VideoCapture
 ### Exportation info ###
 kmlName = "/home/grumpynounours/Desktop/test.kml"
 matName = "/home/grumpynounours/Desktop/test_pyseidon_drifter.mat"
+shpName = "/home/grumpynounours/Desktop/test.shp"
 
 # Debug flag
 debug = False  # True
@@ -32,9 +33,7 @@ debug = False  # True
 uav = UAV("test_file.log", debug=debug)
 #  Manual attributes definition. THis step will be looped
 uav.centreCoordinates = (-66.3406, 44.2564557)  # (lon., lat.) in decimal degrees. Convention
-uav.yaw = -38.2  # in radian. Convention?
-#uav.vertiFOV = np.deg2rad(61.9)  # in rad.
-#uav.horiFOV = np.deg2rad(82.4)  # in rad.
+uav.yaw = -38.2  # in degrees. Convention?
 uav.FOV = 94.0  # in deg.
 uav.altitude = 111.4  # in meters (feet to meter conversion here). Convention?
 uav.timeRef = datetime(2016, 12, 01)
@@ -85,7 +84,8 @@ detect_interval = 5  # Default value = 5.
 # Initialise loop through video frames
 tracks = []
 frameIdx = []
-for frame_id in range(cap.nbFrames):
+pbar = ProgressBar()
+for frame_id in pbar(range(cap.nbFrames)):
     ret, frame = cap.read()
     if ret:
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -162,3 +162,6 @@ write2kml(tracksInDeg, kmlName)
 
 # Export to matlab (based on drifters' file format)
 write2drifter(d, uav, matName)
+
+#Export to shapefile
+write2shp(d, shpName, debug=debug)
