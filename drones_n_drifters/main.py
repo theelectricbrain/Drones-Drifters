@@ -164,4 +164,4 @@ write2kml(tracksInDeg, kmlName)
 write2drifter(d, uav, matName)
 
 #Export to shapefile
-write2shp(d, shpName, debug=debug)
+write2shp(d, shpName)

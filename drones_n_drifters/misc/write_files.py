@@ -71,10 +71,10 @@ def write2shp(d, title):
     # title = title.replace("-", "_")
     # title = title.replace("/", "_")
     #
-    # if not title[-4:] == '.shp':
-    #     filename = title + '.shp'
-    # else:
-    #     filename= title
+    if not title[-4:] == '.shp':
+        filename = title + '.shp'
+    else:
+        filename= title
 
     # Reading from dataframe
     u = []
