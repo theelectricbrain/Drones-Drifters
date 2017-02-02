@@ -88,3 +88,7 @@ def motion_tracking_Lucas_Kanade(tracks, frameIdx, frame_id, prev_gray, greyScal
         cv2.imshow('motion tracking', gsm)
 
     return tracks, frameIdx
+
+def motion_tracking_custom():
+    # Dilate white pixel
+    # track little suqares

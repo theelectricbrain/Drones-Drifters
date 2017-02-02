@@ -7,17 +7,39 @@ import cv2
 import skvideo.io
 import numpy as np
 
-def color_detection(rgb, colorBounds=([180, 69, 0], [240, 200, 240]), debug=False):
+# def color_detection(rgb, colorBounds=([180, 69, 0], [240, 200, 240]), debug=False):
+#     """
+#     Detects given colors and produces grey mask accordingly
+#     :param rgb: RGB frame
+#     :param colorBounds: detection's color bounds, (low, high) = ([r,g,b], [R,G,B])
+#     :return: grey scale image
+#     """
+#     # Color detection
+#     lower = np.array(colorBounds[0], dtype="uint8")
+#     upper = np.array(colorBounds[1], dtype="uint8")
+#     greyMask = cv2.inRange(rgb, lower, upper)
+#     if debug:
+#         cv2.namedWindow('color detection', cv2.WINDOW_NORMAL)
+#         cv2.resizeWindow('color detection', 1200, 1200)
+#         cv2.imshow('color detection', greyMask)
+#
+#     return greyMask
+
+def color_detection(frame, colorBounds=([180, 69, 0], [240, 200, 240]), debug=False):
     """
     Detects given colors and produces grey mask accordingly
-    :param rgb: RGB frame
-    :param colorBounds: detection's color bounds, (low, high) = ([r,g,b], [R,G,B])
+    :param frame: BGR frame
+    :param colorBounds: detection's color bounds, (low, high) = ([h,s,v], [H,S,V])
     :return: grey scale image
     """
-    # Color detection
-    lower = np.array(colorBounds[0], dtype="uint8")
-    upper = np.array(colorBounds[1], dtype="uint8")
-    greyMask = cv2.inRange(rgb, lower, upper)
+    # Conversion RGB to HSV
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    # define range of detected color in HSV
+    lower_color = np.array(colorBounds[0])
+    upper_color = np.array(colorBounds[1])
+    # Threshold the HSV image to get only specified colors
+    greyMask = cv2.inRange(hsv, lower_color, upper_color)
+
     if debug:
         cv2.namedWindow('color detection', cv2.WINDOW_NORMAL)
         cv2.resizeWindow('color detection', 1200, 1200)
@@ -25,17 +47,17 @@ def color_detection(rgb, colorBounds=([180, 69, 0], [240, 200, 240]), debug=Fals
 
     return greyMask
 
-def white_patches_masking(rgb, whiteBounds = ([235, 235, 235], [255, 255, 255]),
+def white_patches_masking(frame, whiteBounds = ([235, 235, 235], [255, 255, 255]),
                           dilatationKernelSize=301, debug=False):
     """
     Detection white colored pixels, dilates them and returns resulting grey scale mask
-    :param rgb: RGB frame
+    :param frame: HSV frame
     :param whiteBounds: bounds of the color white, (low, high) = ([r,g,b], [R,G,B])
     :param dilatationKernel: dilatation kernel, (nb x pixels, nb y pixels)
     :return: grey scale frame masking out white patches
     """
     dilatationKernel = np.ones((dilatationKernelSize, dilatationKernelSize))
-    maskWhite = color_detection(rgb, colorBounds=whiteBounds)
+    maskWhite = color_detection(frame, colorBounds=whiteBounds)
     # Dilate white patches
     dilatedMaskWhite = cv2.bitwise_not(cv2.dilate(maskWhite, dilatationKernel))
     # Check patches size and make sure that they are bigger than dilatation kernel (due to chaos white pixels)

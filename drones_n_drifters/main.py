@@ -31,7 +31,7 @@ debug = False  # True
 # UAV attributes and parameters
 #  TODO: UAV Attributes to retrieve from log.
 uav = UAV("test_file.log", debug=debug)
-#  Manual attributes definition. THis step will be looped
+#  Manual attributes definition. THis step will be looped over the video files trested
 uav.centreCoordinates = (-66.3406, 44.2564557)  # (lon., lat.) in decimal degrees. Convention
 uav.yaw = -38.2  # in degrees. Convention?
 uav.FOV = 94.0  # in deg.
@@ -48,14 +48,17 @@ saveFrames = False
 
 # Color detection attributes
 colorDetect = False  # perform color detection yes/no, true/false
-#  RBG range value for Orange pumkin
-colorBounds = ([180, 60, 0], [240, 220, 250])  # shades of orange
-# TODO: use HSV instead of RGB
+#  HSV range value for Orange pumkin
+# TODO: shall be turned into input in interface module
+colorBounds = ([110, 50, 70], [135, 250, 230])  # shades of orange.
+# For some reason the Hue value are inversed. When opening frame.jpg in GIMP, orange = light blue
+
 
 # White patches masking attributes
 maskOutWhitePatches = True
-#  RBG range value for white surface waves
-whiteBounds = ([245, 245, 245], [255, 255, 255])
+#  HSV range value for white surface waves
+whiteBounds = ([0, 0, 225], [10, 30, 255])
+
 #  Dilation kernel
 dilatationKernelSize = 401
 
@@ -92,8 +95,7 @@ for frame_id in pbar(range(cap.nbFrames)):
         ## Detection ##
         # Color detection, here pumkin orange
         if colorDetect:
-            # TODO: use HSV instead of RGB
-            greyScaleMask = color_detection(rgb, colorBounds=colorBounds, debug=debug)
+            greyScaleMask = color_detection(frame, colorBounds=colorBounds, debug=debug)
         else:
             greyScaleMask = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
