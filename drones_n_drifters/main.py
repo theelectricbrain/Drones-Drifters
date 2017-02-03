@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 from progressbar import ProgressBar
 from imgprocess.image_filtering import *
+from imgprocess.image_post_processing import *
 from traj.motion_tracking import *
 from misc.utilities import *
 from misc.read_input_files import *
@@ -22,7 +23,7 @@ matName = "/home/grumpynounours/Desktop/test_pyseidon_drifter.mat"
 shpName = "/home/grumpynounours/Desktop/test.shp"
 
 # Debug flag
-debug = False  # True
+debug = True
 
 ### Syncronisation and video splitting block ###
 # TODO: to be developed
@@ -57,16 +58,19 @@ colorBounds = ([110, 50, 70], [135, 250, 230])  # shades of orange.
 # White patches masking attributes
 maskOutWhitePatches = True
 #  HSV range value for white surface waves
-whiteBounds = ([0, 0, 225], [10, 30, 255])
-
+whiteBounds = ([0, 0, 235], [10, 20, 255])
+# Version 1
 #  Dilation kernel
-dilatationKernelSize = 401
+# dilatationKernelSize = 401
 
 # Circle detection...not working yet
 circleDetection = False
 #  circle sizes' range
 minArea = 2
 maxArea = 40
+
+# Surface turbulence detection
+surfaceTurbulenceDetection = True
 
 # Motion tracking attributes
 lk_params = dict(winSize=(15, 15),  # what are those?
@@ -87,10 +91,12 @@ detect_interval = 5  # Default value = 5.
 # Initialise loop through video frames
 tracks = []
 frameIdx = []
+iterationId = -1
 pbar = ProgressBar()
 for frame_id in pbar(range(cap.nbFrames)):
     ret, frame = cap.read()
     if ret:
+        iterationId += 1
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         ## Detection ##
         # Color detection, here pumkin orange
@@ -105,14 +111,25 @@ for frame_id in pbar(range(cap.nbFrames)):
             # Resulting mask
             greyScaleMask = cv2.bitwise_and(greyScaleMask, greyScaleMask, mask=circleMask)
 
+        # Surface Turbulence Detection
+        if surfaceTurbulenceDetection:
+            if iterationId == 0:
+                surfTurbMask = 255 * np.ones((frame.shape[0], frame.shape[1], 3), np.uint8)
         ## Filtering ##
         # Mask-out white
-        if maskOutWhitePatches:
-            dilatedMaskWhite = white_patches_masking(rgb, whiteBounds=whiteBounds,
-                                                     dilatationKernelSize=dilatationKernelSize,
-                                                     debug=debug)
-            # Resulting mask
-            greyScaleMask = cv2.bitwise_and(greyScaleMask, greyScaleMask, mask=dilatedMaskWhite)
+        if maskOutWhitePatches or surfaceTurbulenceDetection:
+            # Version 1
+            # dilatedMaskWhite = white_patches_masking(rgb, whiteBounds=whiteBounds,
+            #                                          dilatationKernelSize=dilatationKernelSize,
+            #                                          debug=debug)
+            # Version 2
+            dilatedMaskWhite = white_patches_masking(rgb, whiteBounds=whiteBounds, debug=debug)
+            if maskOutWhitePatches:
+                # Resulting mask
+                greyScaleMask = cv2.bitwise_and(greyScaleMask, greyScaleMask, mask=dilatedMaskWhite)
+            if surfaceTurbulenceDetection:
+                # Resulting surf. turb. mask
+                surfTurbMask = cv2.bitwise_and(surfTurbMask, surfTurbMask, mask=dilatedMaskWhite)
 
         ## Motion tracking ##
         if len(tracks) == 0:
@@ -158,12 +175,19 @@ tracksInDeg, tracksInRelativeM = geo_ref_tracks(tracks, frame, uav, debug=False)
 ### Compute flow velocities ###
 d = velocities_from_geotracks(uav, cap, tracksInDeg, tracksInRelativeM, frameIdx, rw='1S', debug=debug)
 
+### Surface Turbulence post-processing  and geo-referencing###
+if surfaceTurbulenceDetection:
+    surfTurbArea = surface_turbulence_area_post_process(surfTurbMask, debug=debug)
+# TODO: surf_contours = geo_ref_contours(surfTurbArea)
+
 ### Exportation block ###
 # Export to kmz
-write2kml(tracksInDeg, kmlName)
+write_tracks2kml(tracksInDeg, kmlName)
+# TODO: if surfaceTurbulenceDetection: write_contours2kml(surf_contours, fill=True)
 
 # Export to matlab (based on drifters' file format)
 write2drifter(d, uav, matName)
 
 #Export to shapefile
 write2shp(d, shpName)
+# TODO: if surfaceTurbulenceDetection: write_contours2shp(surf_contours, fill=True)

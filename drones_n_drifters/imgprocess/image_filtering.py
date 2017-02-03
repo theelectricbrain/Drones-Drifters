@@ -35,10 +35,12 @@ def color_detection(frame, colorBounds=([180, 69, 0], [240, 200, 240]), debug=Fa
     # Conversion RGB to HSV
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     # define range of detected color in HSV
-    lower_color = np.array(colorBounds[0])
-    upper_color = np.array(colorBounds[1])
+    lower_color = np.array(colorBounds[0], dtype = "uint8")
+    upper_color = np.array(colorBounds[1], dtype = "uint8")
     # Threshold the HSV image to get only specified colors
     greyMask = cv2.inRange(hsv, lower_color, upper_color)
+    # Dilate mask
+    greyMask = cv2.dilate(greyMask, None, iterations=2)
 
     if debug:
         cv2.namedWindow('color detection', cv2.WINDOW_NORMAL)
@@ -47,42 +49,71 @@ def color_detection(frame, colorBounds=([180, 69, 0], [240, 200, 240]), debug=Fa
 
     return greyMask
 
-def white_patches_masking(frame, whiteBounds = ([235, 235, 235], [255, 255, 255]),
-                          dilatationKernelSize=301, debug=False):
+# Version 1
+# def white_patches_masking(frame, whiteBounds = ([235, 235, 235], [255, 255, 255]),
+#                           dilatationKernelSize=301, debug=False):
+#     """
+#     Detection white colored pixels, dilates them and returns resulting grey scale mask
+#     :param frame: HSV frame
+#     :param whiteBounds: bounds of the color white, (low, high) = ([r,g,b], [R,G,B])
+#     :param dilatationKernel: dilatation kernel, (nb x pixels, nb y pixels)
+#     :return: grey scale frame masking out white patches
+#     """
+#     dilatationKernel = np.ones((dilatationKernelSize, dilatationKernelSize))
+#     maskWhite = color_detection(frame, colorBounds=whiteBounds)
+#     # Dilate white patches
+#     dilatedMaskWhite = cv2.bitwise_not(cv2.dilate(maskWhite, dilatationKernel))
+#     # Check patches size and make sure that they are bigger than dilatation kernel (due to chaos white pixels)
+#     # They look like kernel sized squares
+#     circularity = 0.785  # circularity for a square
+#     minPixel = dilatationKernel.size  # single dilated white pixel
+#     maxPixel = np.round(minPixel * 1.2)
+#     keypoints = blob_detector(dilatedMaskWhite, minPixel, maxPixel, circularity)
+#     # setting black square to white
+#     for kp in keypoints:
+#         i = int(np.round(kp.pt[1]))
+#         j = int(np.round(kp.pt[0]))
+#         interval = int(np.round(np.round(dilatationKernelSize * 1.1 / 2.0)))  # interval = half kernel + 10%
+#         dilatedMaskWhite[(i - interval):(i + interval), (j - interval):(j + interval)] = 255
+#     if debug:
+#         cv2.namedWindow('white detection', cv2.WINDOW_NORMAL)
+#         cv2.resizeWindow('white detection', 1200, 1200)
+#         cv2.namedWindow('white patches dilatation', cv2.WINDOW_NORMAL)
+#         cv2.resizeWindow('white patches dilatation', 1200, 1200)
+#         cv2.imshow('white detection', maskWhite)
+#         im_with_keypoints = cv2.drawKeypoints(dilatedMaskWhite, keypoints, np.array([]), (0, 0, 255),
+#                                               cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+#         cv2.imshow('white patches dilatation', im_with_keypoints)
+#
+#     return dilatedMaskWhite
+
+
+## Version 2
+def white_patches_masking(frame, whiteBounds = ([0, 0, 225], [10, 30, 255]), debug=False):
     """
     Detection white colored pixels, dilates them and returns resulting grey scale mask
-    :param frame: HSV frame
+    :param frame: BGR frame
     :param whiteBounds: bounds of the color white, (low, high) = ([r,g,b], [R,G,B])
     :param dilatationKernel: dilatation kernel, (nb x pixels, nb y pixels)
     :return: grey scale frame masking out white patches
     """
-    dilatationKernel = np.ones((dilatationKernelSize, dilatationKernelSize))
     maskWhite = color_detection(frame, colorBounds=whiteBounds)
-    # Dilate white patches
-    dilatedMaskWhite = cv2.bitwise_not(cv2.dilate(maskWhite, dilatationKernel))
-    # Check patches size and make sure that they are bigger than dilatation kernel (due to chaos white pixels)
-    # They look like kernel sized squares
-    circularity = 0.785  # circularity for a square
-    minPixel = dilatationKernel.size  # single dilated white pixel
-    maxPixel = np.round(minPixel * 1.2)
-    keypoints = blob_detector(dilatedMaskWhite, minPixel, maxPixel, circularity)
-    # setting black square to white
-    for kp in keypoints:
-        i = int(np.round(kp.pt[1]))
-        j = int(np.round(kp.pt[0]))
-        interval = int(np.round(np.round(dilatationKernelSize * 1.1 / 2.0)))  # interval = half kernel + 10%
-        dilatedMaskWhite[(i - interval):(i + interval), (j - interval):(j + interval)] = 255
+    # Dilate and blur white patches
+    maskWhite = cv2.dilate(maskWhite, None, iterations=2)
+    maskWhite = cv2.GaussianBlur(maskWhite, (51, 51), 0)
+    # find contours
+    cnts = cv2.findContours(maskWhite.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
+    # Fill contours with white
+    cv2.drawContours(maskWhite, cnts, -1, (255, 255, 255), thickness=-1)
+    # Invert mask
+    maskWhite = 255 - maskWhite
+
     if debug:
         cv2.namedWindow('white detection', cv2.WINDOW_NORMAL)
         cv2.resizeWindow('white detection', 1200, 1200)
-        cv2.namedWindow('white patches dilatation', cv2.WINDOW_NORMAL)
-        cv2.resizeWindow('white patches dilatation', 1200, 1200)
         cv2.imshow('white detection', maskWhite)
-        im_with_keypoints = cv2.drawKeypoints(dilatedMaskWhite, keypoints, np.array([]), (0, 0, 255),
-                                              cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-        cv2.imshow('white patches dilatation', im_with_keypoints)
 
-    return dilatedMaskWhite
+    return maskWhite
 
 # TODO: not working
 def disk_filtering(rgb, minPixel, maxPixel, debug=False):

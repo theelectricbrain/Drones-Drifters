@@ -9,7 +9,7 @@ from osgeo import ogr
 from osgeo import osr
 from utilities import *
 
-def write2kml(tracksInDeg, kmlName):
+def write_tracks2kml(tracksInDeg, kmlName):
     """
     Writes trajectories in KML file
 
@@ -22,6 +22,8 @@ def write2kml(tracksInDeg, kmlName):
     kml.save(kmlName)
 
     return
+
+# TODO: def write_contours2kml(surf_contours, fill=True)
 
 def write2drifter(d, uav, matName):
     """
@@ -147,3 +149,5 @@ def write2shp(d, title):
     shapeData.Destroy()
 
     return
+
+# TODO: def write_contours2shp(surf_contours, fill=True)

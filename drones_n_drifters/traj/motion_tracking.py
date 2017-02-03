@@ -20,7 +20,7 @@ feature_params = dict(maxCorners=500,  # what are those?
 
 
 def motion_tracking_Lucas_Kanade(tracks, frameIdx, frame_id, prev_gray, greyScaleMask,
-                                 minTrackLength=1000, detect_interval=5,
+                                 minTrackLength=500, detect_interval=5,
                                  lk_params=lk_params, feature_params=feature_params, debug=False):
     """
     Tracks motion with Lucas-Kanade sparse optical flow and returns obhects trajectories
@@ -89,6 +89,6 @@ def motion_tracking_Lucas_Kanade(tracks, frameIdx, frame_id, prev_gray, greyScal
 
     return tracks, frameIdx
 
-def motion_tracking_custom():
+# def motion_tracking_custom():
     # Dilate white pixel
     # track little suqares

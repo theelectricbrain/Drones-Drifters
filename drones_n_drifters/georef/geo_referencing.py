@@ -91,3 +91,5 @@ def geo_ref_tracks(tracks, frame, uav, debug=False):
     #         trM.append([x, y])
 
     return tracksInDeg, tracksInRelativeM
+
+# TODO: def geo_ref_contours
