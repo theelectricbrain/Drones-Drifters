@@ -178,12 +178,14 @@ d = velocities_from_geotracks(uav, cap, tracksInDeg, tracksInRelativeM, frameIdx
 ### Surface Turbulence post-processing  and geo-referencing###
 if surfaceTurbulenceDetection:
     surfTurbArea = surface_turbulence_area_post_process(surfTurbMask, debug=debug)
-# TODO: surf_contours = geo_ref_contours(surfTurbArea)
+    surf_contours = geo_ref_contours(surfTurbArea, uav, debug=debug)
 
 ### Exportation block ###
 # Export to kmz
 write_tracks2kml(tracksInDeg, kmlName)
-# TODO: if surfaceTurbulenceDetection: write_contours2kml(surf_contours, fill=True)
+if surfaceTurbulenceDetection:
+    kmlName[:-4] + "_surface_turbulence_areas.kml"
+    write_contours2kml(surf_contours, kmlName)
 
 # Export to matlab (based on drifters' file format)
 write2drifter(d, uav, matName)

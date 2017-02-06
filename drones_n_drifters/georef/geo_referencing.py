@@ -4,6 +4,7 @@
 from __future__ import division
 import numpy as np
 # from pyproj import Proj, pj_list, pj_ellps
+import cv2
 
 
 def geo_ref_tracks(tracks, frame, uav, debug=False):
@@ -93,3 +94,31 @@ def geo_ref_tracks(tracks, frame, uav, debug=False):
     return tracksInDeg, tracksInRelativeM
 
 # TODO: def geo_ref_contours
+def geo_ref_contours(surfTurbArea, uav, debug=False):
+    """
+    Geo-references surface turbulence areas
+
+    :param surfTurbArea: frame of surface turbulence areas
+    :param uav: UAV object
+    :return: geo-referenced contours
+    """
+    # Find contours from white areas
+    imgray = cv2.cvtColor(surfTurbArea,cv2.COLOR_BGR2GRAY)
+    ret, thresh = cv2.threshold(imgray,127,255,0)
+    im2, contours, hierarchy = cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+    if debug:
+        im = cv2.drawContours(surfTurbArea, contours, -1, (0,255,0), 3)
+        cv2.namedWindow('Areas & contours', cv2.WINDOW_NORMAL)
+        cv2.resizeWindow('Areas & contours', 1200, 1200)
+        cv2.imshow('Areas & contours', im)
+    # Reformating
+    contoursList = []
+    for cnt in contours:
+        coordsList = []
+        for coords in cnt:
+            coordsList.append(tuple(coords[0]))
+        contoursList.append(coordsList)
+    # Georeference contours
+    contoursInDeg, contoursInM = geo_ref_tracks(contoursList, surfTurbArea, uav, debug=debug)
+
+    return contoursInDeg
