@@ -184,7 +184,7 @@ if surfaceTurbulenceDetection:
 # Export to kmz
 write_tracks2kml(tracksInDeg, kmlName)
 if surfaceTurbulenceDetection:
-    kmlName[:-4] + "_surface_turbulence_areas.kml"
+    kmlName = kmlName[:-4] + "_surface_turbulence_areas.kml"
     write_contours2kml(surf_contours, kmlName)
 
 # Export to matlab (based on drifters' file format)
@@ -192,4 +192,6 @@ write2drifter(d, uav, matName)
 
 #Export to shapefile
 write2shp(d, shpName)
-# TODO: if surfaceTurbulenceDetection: write_contours2shp(surf_contours, fill=True)
+if surfaceTurbulenceDetection:
+    shpName = shpName[:-4] + "_surface_turbulence_areas.shp"
+    write_contours2shp(surf_contours, shpName)

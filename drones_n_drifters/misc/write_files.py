@@ -78,25 +78,25 @@ def write2drifter(d, uav, matName):
 
     return
 
-def write2shp(d, title):
+def write2shp(d, shpName):
     """
     Writes velocity components in shapefile
 
     :param d: dataframe
-    :param title: shapefile's title
+    :param shpName: shapefile's shpName
     """
 
     # # Reformat file name
-    # title = title.replace(" ", "_")
-    # title = title.replace("(", "_")
-    # title = title.replace(")", "_")
-    # title = title.replace("-", "_")
-    # title = title.replace("/", "_")
+    # shpName = shpName.replace(" ", "_")
+    # shpName = shpName.replace("(", "_")
+    # shpName = shpName.replace(")", "_")
+    # shpName = shpName.replace("-", "_")
+    # shpName = shpName.replace("/", "_")
     #
-    if not title[-4:] == '.shp':
-        filename = title + '.shp'
+    if not shpName[-4:] == '.shp':
+        filename = shpName + '.shp'
     else:
-        filename= title
+        filename= shpName
 
     # Reading from dataframe
     u = []
@@ -170,4 +170,60 @@ def write2shp(d, title):
 
     return
 
-# TODO: def write_contours2shp(surf_contours, fill=True)
+def write_contours2shp(surf_contours, shpName):
+    """
+    Write area & contours in shapefile
+
+    :param surf_contours: areas' contours
+    :param shpName: shapefile's name
+    """
+    # Check shapefile name
+    if not shpName[-4:] == '.shp':
+        filename = shpName + '.shp'
+    else:
+        filename= shpName
+    # Create multi-poly
+    multipolygon = ogr.Geometry(ogr.wkbMultiPolygon)
+    for contour in surf_contours:
+        # Create ring
+        ring = ogr.Geometry(ogr.wkbLinearRing)
+        # Add points to ring
+        for pt in contour:
+            ring.AddPoint(pt[0], pt[1])
+        # Create polygon from ring
+        poly = ogr.Geometry(ogr.wkbPolygon)
+        poly.AddGeometry(ring)
+        # Add poly to multi-poly
+        multipolygon.AddGeometry(poly)
+
+    # Create shapefile
+    # Projection
+    # epsg_in=4326
+    epsg_in = 3857  # Google Projection
+
+    # give alternative file name is already exists
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+    if os.path.exists(filename):
+        filename = filename[:-4] + "_bis.shp"
+
+    # Create data source
+    shapeData = driver.CreateDataSource(filename)
+    spatialRefi = osr.SpatialReference()
+    spatialRefi.ImportFromEPSG(epsg_in)
+
+    # Create layer
+    # layer = shapeData.CreateLayer("_layer", spatialRefi, ogr.wkbMultiPolygon)
+    layer = shapeData.CreateLayer("_layer", None, ogr.wkbMultiPolygon)
+    layer.CreateField(ogr.FieldDefn('multipoly', ogr.OFTReal))
+    layerDefn = layer.GetLayerDefn()
+
+    # Create feature
+    feat = ogr.Feature(layerDefn)
+    feat.SetGeometry(multipolygon)
+    layer.CreateFeature(feat)
+
+    # Destroy the feature and data to free resources
+    feat.Destroy()
+    shapeData.Destroy()
+
+    return
