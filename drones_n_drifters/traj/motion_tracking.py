@@ -89,6 +89,3 @@ def motion_tracking_Lucas_Kanade(tracks, frameIdx, frame_id, prev_gray, greyScal
 
     return tracks, frameIdx
 
-# def motion_tracking_custom():
-    # Dilate white pixel
-    # track little suqares

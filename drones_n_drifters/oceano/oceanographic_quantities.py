@@ -43,6 +43,8 @@ def velocities_from_geotracks(uav, cap, tracksInDeg, tracksInRelativeM, frameIdx
         d[key]['Speed'] = dist.Dist / (dist.Time / 1e9)
         d[key]['U'] = dist.x / (dist.Time / 1e9)
         d[key]['V'] = dist.y / (dist.Time / 1e9)
-        d[key] = d[key].drop('Time', axis=1)
+        # Dropping unnecessary info
+        d[key].drop('Time', axis=1, inplace=True)
+        d[key].drop(d[key].index[0], inplace=True)
 
     return d

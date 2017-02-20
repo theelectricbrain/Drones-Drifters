@@ -23,7 +23,7 @@ matName = "/home/grumpynounours/Desktop/test_pyseidon_drifter.mat"
 shpName = "/home/grumpynounours/Desktop/test.shp"
 
 # Debug flag
-debug = True
+debug = False
 
 ### Syncronisation and video splitting block ###
 # TODO: to be developed
