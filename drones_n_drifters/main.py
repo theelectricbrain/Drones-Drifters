@@ -18,12 +18,12 @@ from misc.write_files import *
 from skvideo.io import VideoCapture
 
 ### Exportation info ###
-kmlName = "/home/grumpynounours/Desktop/test.kml"
-matName = "/home/grumpynounours/Desktop/test_pyseidon_drifter.mat"
-shpName = "/home/grumpynounours/Desktop/test.shp"
+kmlName = "/home/grumpynounours/Desktop/validation_case2.kml"
+matName = "/home/grumpynounours/Desktop/validation_case2_pyseidon_drifter.mat"
+shpName = "/home/grumpynounours/Desktop/validation_case2.shp"
 
 # Debug flag
-debug = False
+debug = True
 
 ### Syncronisation and video splitting block ###
 # TODO: to be developed
@@ -33,15 +33,16 @@ debug = False
 #  TODO: UAV Attributes to retrieve from log.
 uav = UAV("test_file.log", debug=debug)
 #  Manual attributes definition. THis step will be looped over the video files trested
-uav.centreCoordinates = (-66.3406, 44.2564557)  # (lon., lat.) in decimal degrees. Convention
-uav.yaw = -38.2  # in degrees. Convention?
+uav.centreCoordinates = (-64.397296, 45.327287) # (-66.3406, 44.2564557)  # (lon., lat.) in decimal degrees. Convention
+uav.yaw = -90.20 # -38.2  # in degrees. Convention?
 uav.FOV = 94.0  # in deg.
-uav.altitude = 111.4  # in meters (feet to meter conversion here). Convention?
+uav.altitude = 76.3  # 111.4  # in meters (feet to meter conversion here). Convention?
 uav.timeRef = datetime(2016, 12, 01)
 
 # Video capture
 #   Manual defined. THis step will be looped
 cap = CAP("/home/grumpynounours/Desktop/Electric_Brain/measurements/pumkin_passing_test.MOV")
+#cap = CAP("/home/grumpynounours/Desktop/Electric_Brain/measurements/drifter_validation_case2.MOV")
 
 ### Video processing block ###
 # Save Frames
@@ -58,7 +59,7 @@ colorBounds = ([110, 50, 70], [135, 250, 230])  # shades of orange.
 # White patches masking attributes
 maskOutWhitePatches = True
 #  HSV range value for white surface waves
-whiteBounds = ([0, 0, 235], [10, 20, 255])
+whiteBounds = ([0, 0, 245], [10, 10, 255])
 # Version 1
 #  Dilation kernel
 # dilatationKernelSize = 401
@@ -159,6 +160,10 @@ for frame_id in pbar(range(cap.nbFrames)):
 # Release everything if job is finished
 cap.release()
 cv2.destroyAllWindows()
+
+# Check if problem in video file
+if iterationId == -1:
+    sys.exit("!!! There is a problem with the format of the video file !!!")
 
 # Turn tracks and frameIdx list into array
 tracks = np.asarray(tracks)
