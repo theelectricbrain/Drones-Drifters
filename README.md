@@ -7,6 +7,7 @@
   Use Unmanned Aerial Vehicles (UAVs).
 * The present package is still a work in progress, so the more feedback,
   the better.
+* Website: [https://theelectricbrain.github.io/Drones-Drifters/](https://theelectricbrain.github.io/Drones-Drifters/)
 
 ### Applications ###
 * The initial application is mapping temporally varying flow fields in open channel
